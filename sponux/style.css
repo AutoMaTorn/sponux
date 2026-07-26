@@ -1,0 +1,153 @@
+/* sponux — appearance.
+ *
+ * Everything worth changing is a variable in the block below. To restyle the
+ * launcher, redefine the ones you care about in ~/.config/sponux/style.css:
+ *
+ *     :root {
+ *         --sponux-font: "JetBrainsMono Nerd Font";
+ *         --sponux-font-size: 16px;
+ *         --sponux-accent: #f38ba8;
+ *     }
+ *
+ * That file is loaded after this one and wins, so you never copy this sheet to
+ * change one colour. The rules further down are there for anything the
+ * variables do not reach.
+ */
+
+:root {
+    /* Font. Left undefined, the desktop's own UI font is used. Give the family
+       exactly as fontconfig knows it — check with `fc-match "Some Font"`,
+       which quietly answers with a substitute when the name is wrong. */
+    /* --sponux-font: "JetBrainsMono Nerd Font"; */
+
+    /* The size of a result title. The query, path, badges and hints are
+       derived from it, so this one number scales the whole card. */
+    --sponux-font-size: 15px;
+
+    --sponux-bg: #15171c;
+    --sponux-fg: #e7e9ee;
+    --sponux-muted: #939ba9;   /* paths, descriptions */
+    --sponux-dim: #5f6875;     /* badges, key hints, placeholder */
+    --sponux-accent: #6ea8fe;  /* selection, caret */
+    --sponux-line: rgba(255, 255, 255, 0.08);
+    --sponux-border: rgba(255, 255, 255, 0.09);
+    --sponux-shadow: rgba(0, 0, 0, 0.55);
+
+    --sponux-radius: 16px;
+    --sponux-row-radius: 10px;
+}
+
+window.sponux {
+    background: transparent;
+}
+
+.sponux-card {
+    background-color: var(--sponux-bg);
+    color: var(--sponux-fg);
+    border: 1px solid var(--sponux-border);
+    border-radius: var(--sponux-radius);
+    box-shadow: 0 18px 48px var(--sponux-shadow);
+    font-family: var(--sponux-font, inherit);
+}
+
+/* An Entry draws its frame on the `entry` node and its text on a child
+   `text` node, and the theme puts a background, border and focus ring on
+   both. All of it has to go for the field to sit flush in the card — and the
+   font has to be named on both, because `text` carries its own. */
+.sponux-search,
+.sponux-search > text {
+    font-family: var(--sponux-font, inherit);
+    font-size: calc(var(--sponux-font-size) + 6px);
+    color: var(--sponux-fg);
+    caret-color: var(--sponux-accent);
+    background: none;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    outline: none;
+    min-height: 0;
+}
+
+.sponux-search {
+    padding: 15px 18px;
+}
+
+.sponux-search:focus,
+.sponux-search:focus-within,
+.sponux-search > text:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+.sponux-search > text > placeholder {
+    color: var(--sponux-dim);
+}
+
+.sponux-search > text selection {
+    background-color: var(--sponux-accent);
+    color: var(--sponux-bg);
+}
+
+.sponux-sep {
+    background-color: var(--sponux-line);
+    min-height: 1px;
+}
+
+.sponux-results {
+    background: transparent;
+    padding: 6px;
+}
+
+.sponux-row {
+    padding: 9px 12px;
+}
+
+/* The selection is drawn by the ListBoxRow itself, not by the box inside it:
+   styling only the inner box leaves the theme's own solid highlight showing
+   through underneath. The accent edge is an inset shadow rather than a
+   border, which would shift the text sideways every time it moved. */
+.sponux-results > row {
+    border-radius: var(--sponux-row-radius);
+}
+
+.sponux-results > row:selected {
+    background-color: alpha(var(--sponux-accent), 0.18);
+    background-image: none;
+    box-shadow: inset 3px 0 0 var(--sponux-accent);
+    color: #ffffff;
+}
+
+.sponux-title {
+    font-family: var(--sponux-font, inherit);
+    font-size: var(--sponux-font-size);
+    color: var(--sponux-fg);
+}
+
+.sponux-subtitle {
+    font-family: var(--sponux-font, inherit);
+    font-size: calc(var(--sponux-font-size) - 3px);
+    color: var(--sponux-muted);
+}
+
+.sponux-results > row:selected .sponux-subtitle {
+    color: #c5cdda;
+}
+
+.sponux-badge {
+    font-family: var(--sponux-font, inherit);
+    font-size: calc(var(--sponux-font-size) - 4px);
+    color: var(--sponux-dim);
+    background-color: var(--sponux-line);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+/* The key hints under the results. Quiet by design: they are there to be
+   found once and then ignored. */
+.sponux-hints {
+    font-family: var(--sponux-font, inherit);
+    font-size: calc(var(--sponux-font-size) - 4px);
+    color: var(--sponux-dim);
+    padding: 6px 14px 9px 14px;
+}

@@ -1,0 +1,8 @@
+sponux (0.1.0-1) unstable; urgency=medium
+
+  * Initial release: application, file and calculator search in a resident
+    GTK 4 daemon toggled over D-Bus.
+  * Ships a desktop entry, a manual page, and --autostart for starting the
+    daemon at login.
+
+ -- automatorn <automatorn@gmail.com>  Sun, 26 Jul 2026 08:00:00 +0300

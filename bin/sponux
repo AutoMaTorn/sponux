@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Thin launcher for sponux. Runs the resident daemon on first call and
+# just toggles the window on subsequent calls (single-instance GApplication).
+
+# Find the package, whichever of the three ways sponux is being run:
+#   unpacked tree   <dir>/bin/sponux       -> <dir>/sponux/
+#   .deb            /usr/bin/sponux        -> /usr/share/sponux/sponux/
+#   wheel           already on sys.path, so leave PYTHONPATH alone
+here="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if [ -f "$here/sponux/__main__.py" ]; then
+    export PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}"
+elif [ -f "$here/share/sponux/sponux/__main__.py" ]; then
+    export PYTHONPATH="$here/share/sponux${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
+# Fast path: if the daemon is already up, poke it over D-Bus directly.
+#
+# Going through `python3 -m sponux` would work too — GApplication forwards the
+# activation to the running instance — but only after this process has imported
+# gi and GTK 4, which measures ~325 ms. That import is the entire cost of
+# opening the launcher: 327 ms via Python against 11 ms via D-Bus.
+#
+# Only for a bare toggle; anything with arguments (--reindex) needs Python.
+# If gdbus is missing or the daemon isn't running, the call fails and we fall
+# through to starting it.
+if [ $# -eq 0 ]; then
+    gdbus call --session \
+        --dest io.github.sponux \
+        --object-path /io/github/sponux \
+        --method org.freedesktop.Application.Activate "{}" \
+        >/dev/null 2>&1 && exit 0
+fi
+
+# -P keeps the current directory off sys.path. Without it `python3 -m sponux`
+# prepends the cwd, so running the launcher from a directory that happens to
+# contain a sponux/ (this repository, most obviously) imports that one instead
+# of the installed package. PYTHONPATH above is the only path we want added.
+exec python3 -P -m sponux "$@"

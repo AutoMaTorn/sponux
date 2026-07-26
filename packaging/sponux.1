@@ -1,0 +1,181 @@
+'\" t
+.\" The line above is the preprocessor marker: this page has a .TS table, and
+.\" without it man does not run tbl and the KEYS section renders as garbage.
+.TH SPONUX 1 "2026-07-26" "sponux 0.1.0" "User Commands"
+.SH NAME
+sponux \- Spotlight-like launcher for applications, files and arithmetic
+.SH SYNOPSIS
+.B sponux
+.RI [ OPTION ]
+.SH DESCRIPTION
+.B sponux
+is a keyboard launcher for X11.
+It searches installed applications, a self-maintained index of filenames under
+your home directory, and evaluates arithmetic expressions.
+.PP
+It runs as a single-instance resident daemon.
+The first call starts it and shows the window; every later call toggles that
+window, which takes about 20 ms because no interpreter is started \(em the
+wrapper pokes the running daemon over D\-Bus.
+Bind
+.B sponux
+to a key in your window manager or desktop; no hotkey daemon and no
+window-manager rules are needed.
+.PP
+The window takes itself out of the window manager's hands entirely (X11
+override-redirect) and places itself at the top-centre of whichever monitor
+holds the pointer.
+It claims the keyboard focus but never becomes the window manager's focused
+window, so a tiling WM keeps its focus highlight where it was.
+Under Wayland the placement is left to the compositor.
+.SH OPTIONS
+.TP
+.B \-\-daemon
+Start the resident daemon without showing the window.
+Intended for autostart at login: it moves the ~420 ms cold start out of the
+first keypress.
+Does nothing if a daemon is already running.
+.TP
+.BR \-\-autostart " [" on | off | status ]
+Show, enable or disable starting the daemon when you log in, by writing or
+removing
+.IR ~/.config/autostart/sponux.desktop .
+With no argument, reports the current state.
+.TP
+.B \-\-reindex
+Rebuild the file index now and exit.
+Rarely needed: the daemon watches every indexed directory with inotify and
+rebuilds in full every 15 minutes as a safety net.
+.TP
+.B \-\-write-config
+Write commented starter files to
+.IR ~/.config/sponux/ .
+Existing files are kept unless
+.B \-\-force
+is given, in which case the previous version is backed up to
+.IR ~/.local/state/sponux/ .
+.TP
+.BI \-\-which " PATH"
+Explain how
+.I PATH
+would be opened: its content type, which rule in
+.I config.toml
+matched, the exact command, and whether that command exists.
+The mime types are not guessable \(em GIO reports a
+.I .ts
+file as Qt Linguist \(em so this is the honest way to write a rule.
+.TP
+.B \-\-check
+Check
+.IR config.toml :
+that every configured command is on
+.BR PATH ,
+that the index roots exist, and that each include lies inside a root.
+.SH KEYS
+.TS
+tab(@);
+l l.
+Type@search applications, files and arithmetic
+Up / Down@move the selection
+Enter@launch, open, or copy a calculator result
+Ctrl+Enter@open the folder containing the selected file
+Ctrl+C@copy the selected file's path
+Shift+Enter@open with\[u2026], optionally remembering the choice
+Escape@hide the window
+Ctrl+Q@quit the daemon
+.TE
+.PP
+The keys that apply to the selected result are shown under the results.
+.SH QUERIES
+A prefix restricts the search to one kind of result; a leading
+.B /
+or
+.B ~/
+means the query is a path rather than a search term.
+.TS
+tab(@);
+l l.
+\fBf:\fP \fBfile:\fP@files only
+\fBa:\fP \fBapp:\fP@applications only
+\fBc:\fP \fB=\fP@the calculator only, as in \fB=1/7\fP
+\fB/\fP\[u2026] \fB~/\fP\[u2026]@that path, and completions of its last component
+.TE
+.PP
+The prefixes are listed under the search field while it is empty and disappear
+as soon as anything is typed.
+.PP
+Typing a path is the way past the index.
+What the file search can find is limited by
+.B [index]
+in
+.IR config.toml ,
+so
+.IR /usr/lib ,
+.I /etc
+and any excluded tree cannot be found by name however exactly it is spelled;
+indexing everything is what makes results useless, so the escape hatch is to
+name the path instead.
+.B /etc/ho
+completes to
+.I /etc/hosts
+with no index involved, a trailing slash lists a directory, and hidden entries
+appear once the dot is typed, as in a shell.
+A typed path always outranks every search result.
+.SH FILES
+.TP
+.I ~/.config/sponux/config.toml
+Behaviour: which application opens what, what the index covers, ranking.
+Optional; edits apply the next time the window is opened, with no restart.
+.TP
+.I ~/.config/sponux/style.css
+Appearance, layered on top of the bundled dark stylesheet.
+Redefining a handful of
+.B \-\-sponux\-*
+variables in
+.B :root
+is the intended way to restyle it.
+.TP
+.I ~/.cache/sponux/index.db
+The filename index. Safe to delete; it rebuilds.
+.TP
+.I ~/.local/state/sponux/usage.db
+What you have opened, and when, for ranking.
+.TP
+.I ~/.local/state/sponux/*.bak
+The last version of a config file sponux replaced.
+.SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+.TQ
+.B XDG_CACHE_HOME
+.TQ
+.B XDG_STATE_HOME
+Honoured for all of the paths above.
+.SH EXAMPLES
+Bind it in i3:
+.PP
+.RS
+.nf
+bindsym $mod+d exec \-\-no\-startup\-id sponux
+.fi
+.RE
+.PP
+Unlike rofi, sponux does not need
+.B \-\-release
+on the binding: it claims the input focus rather than grabbing the keyboard,
+so the window manager holding a grab during the key press does not interfere.
+.PP
+Start the daemon at login and see what a file would open with:
+.PP
+.RS
+.nf
+sponux \-\-autostart on
+sponux \-\-which ~/.config/i3/config
+.fi
+.RE
+.SH SEE ALSO
+.BR rofi (1),
+.BR dmenu (1)
+.PP
+The full documentation is the README, installed as
+.IR /usr/share/doc/sponux/README.md .

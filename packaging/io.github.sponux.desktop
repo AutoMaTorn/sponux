@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=sponux
+GenericName=Application Launcher
+Comment=Search applications, files and do arithmetic
+# The wrapper, not "python3 -m sponux": it pokes an already-running daemon over
+# D-Bus and only falls back to starting Python when there is nothing to poke.
+Exec=sponux
+Icon=system-search
+Terminal=false
+Categories=Utility;
+Keywords=launcher;search;run;spotlight;
+# The window is X11 override-redirect (see placement.py), so it never becomes
+# the window manager's focused window and never sends the startup-notification
+# completion. Asking for notification would leave a spinner running until it
+# timed out.
+StartupNotify=false
+StartupWMClass=sponux
