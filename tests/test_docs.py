@@ -110,9 +110,12 @@ check("README stayed shorter than the guide it points to",
 images = {}
 for lang, text in readmes.items():
     images[lang] = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text)
-    broken = sorted(p for p in images[lang] if not (ROOT / p).is_file())
+    # A remote image — the CI badge — is not ours to verify; only the files
+    # committed alongside the README can be checked for existence.
+    local = [p for p in images[lang] if not p.startswith(("http://", "https://"))]
+    broken = sorted(p for p in local if not (ROOT / p).is_file())
     check(f"README.{lang}: every screenshot it embeds exists", broken, [])
-check("both READMEs embed the same screenshots",
+check("both READMEs embed the same images",
       images["en"], images["ru"])
 check("there are some to embed", len(images["en"]) >= 2, True)
 
@@ -163,6 +166,25 @@ for path in sorted(list((ROOT / "tests").glob("*.py"))
         if (ROOT / quoted_path).resolve() != path:
             wrong.append(f"{path.name} says {quoted_path}")
 check("each script's 'Run:' line names its own path", wrong, [])
+
+# ---- the version is the same everywhere it is written out ----------------
+#
+# The builders refuse to run when these disagree, but a build is not something
+# you do on the way past; a test run is.
+
+sys.path.insert(0, str(ROOT / "tools"))
+import metadata                                      # noqa: E402
+
+try:
+    metadata.check_version_agreement()
+    agreement = ""
+except SystemExit as exc:
+    agreement = str(exc)
+check("every file that spells the version out agrees with pyproject.toml",
+      agreement, "")
+check("…and the manual page is one of the files checked",
+      any("sponux.1" in rel for rel, _ in metadata._VERSION_IN), True)
+
 
 # ---- the commands the guides tell people to run exist --------------------
 

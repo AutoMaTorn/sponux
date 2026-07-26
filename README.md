@@ -4,6 +4,8 @@ A lightweight Spotlight-like launcher for Linux, built with Python + GTK 4.
 
 *[Русский](README.ru.md)*
 
+[![CI](https://github.com/AutoMaTorn/sponux/actions/workflows/ci.yml/badge.svg)](https://github.com/AutoMaTorn/sponux/actions/workflows/ci.yml)
+
 - **App search & launch** — native, via `Gio.AppInfo` (icons and correct
   launching for free). What you open often floats to the top.
 - **File search** — instant, backed by a small self-maintained SQLite index of
@@ -178,6 +180,7 @@ tools/
   bench.py, visual.py                 latency, and screenshotting the real window
 tests/
   test_*.py                           the checks; each one runs standalone
+.github/workflows/ci.yml                the same checks, plus a reproducibility proof
 ```
 
 `packaging/` and `tools/` are build inputs — nothing you need to *run* sponux

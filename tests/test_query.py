@@ -42,6 +42,22 @@ check("app: is not read as a:", split("app:term"), ("app", "term"))
 # "fire" starts with "f" but not with "f:", so it must survive untouched —
 # otherwise every query beginning with f, a or c would be mangled.
 check("a bare letter is not a prefix", split("fire"), (None, "fire"))
+
+# ---- the badge on the right of a row ---------------------------------
+
+badge = sponux_app._badge
+Result = files_provider.Result
+
+check("an application is badged App",
+      badge(Result(title="x", kind="app")), "App")
+check("a file is badged File",
+      badge(Result(title="x", kind="file")), "File")
+check("a directory is badged Folder, not File",
+      badge(Result(title="x", kind="file", is_dir=True)), "Folder")
+check("a calculation is badged Calc",
+      badge(Result(title="x", kind="calc")), "Calc")
+check("an unknown kind gets no badge rather than a wrong one",
+      badge(Result(title="x", kind="something-new")), "")
 check("a colon later on is not a prefix", split("a:b:c"), ("app", "b:c"))
 check("leading space is tolerated", split("  f:x"), ("file", "x"))
 check("prefix with nothing after it", split("f:"), ("file", ""))

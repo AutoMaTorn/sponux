@@ -4,6 +4,8 @@
 
 *[English](README.md)*
 
+[![CI](https://github.com/AutoMaTorn/sponux/actions/workflows/ci.yml/badge.svg)](https://github.com/AutoMaTorn/sponux/actions/workflows/ci.yml)
+
 - **Поиск и запуск приложений** — нативно, через `Gio.AppInfo`: иконки и
   правильный запуск достаются бесплатно. То, что вы открываете часто,
   поднимается наверх.
@@ -182,6 +184,7 @@ tools/
   bench.py, visual.py                 задержки и снимки настоящего окна
 tests/
   test_*.py                           проверки; каждая запускается отдельно
+.github/workflows/ci.yml                те же проверки плюс доказательство воспроизводимости
 ```
 
 `packaging/` и `tools/` — входные данные для сборки: ничто из того, что нужно

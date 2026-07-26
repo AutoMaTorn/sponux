@@ -559,7 +559,7 @@ builders are plain standard-library Python.
 **Build:**
 
 ```sh
-git clone https://github.com/automatorn/sponux && cd sponux
+git clone https://github.com/AutoMaTorn/sponux && cd sponux
 
 python3 tools/mkdeb.py         # dist/sponux_0.1.0-1_all.deb
 python3 tools/mktarball.py     # dist/sponux-0.1.0.tar.gz

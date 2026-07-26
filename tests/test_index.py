@@ -182,13 +182,28 @@ def indexed():
     return sorted(os.path.relpath(p, TREE) for (p,) in rows)
 
 
-def wait_for(predicate, timeout=6.0):
+# The live half of this file waits on a real filesystem, a real inotify queue
+# and a real main loop, so it is the one part that can lose a race on a loaded
+# machine — it has. Six seconds is ample here (a change lands in 0.05s), but CI
+# runners are slower and shared, so let the budget be raised from outside
+# instead of making everyone wait for the worst case.
+TIMEOUT = float(os.environ.get("SPONUX_TEST_TIMEOUT", "6"))
+
+_timed_out = []
+
+
+def wait_for(predicate, timeout=None):
     """Poll until the index reflects a change, or give up. Returns the wait."""
+    timeout = TIMEOUT if timeout is None else timeout
     start = time.monotonic()
     while time.monotonic() - start < timeout:
         if predicate():
             return round(time.monotonic() - start, 2)
         time.sleep(0.05)
+    # Distinguishable from "the index says the wrong thing": a timeout means
+    # the answer never arrived, which is a different bug and, on CI, usually
+    # not a bug at all. Reported at the end so it is not lost in the noise.
+    _timed_out.append(True)
     return None
 
 
@@ -320,5 +335,10 @@ shutil.rmtree(_TMP, ignore_errors=True)
 print()
 if _failures:
     print(f"{len(_failures)} failed: {', '.join(_failures)}")
+    if _timed_out:
+        print(f"{len(_timed_out)} of them waited the full {TIMEOUT:g}s and gave "
+              "up, which on a loaded machine usually means slow rather than "
+              "broken. Raise SPONUX_TEST_TIMEOUT and try again before "
+              "believing it.")
     sys.exit(1)
 print("all index checks passed")

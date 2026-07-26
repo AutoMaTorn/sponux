@@ -17,6 +17,18 @@ PLACEHOLDER = "Search apps, files, or calculate…"
 _KIND_LABEL = {"app": "App", "file": "File", "calc": "Calc",
                "openwith": "Open with", "remember": "Rule"}
 
+
+def _badge(res):
+    """What the badge on the right of a row says.
+
+    Directories share the "file" kind with files — everything acts on them the
+    same way — but calling a folder a File in the one place the user actually
+    reads is just wrong.
+    """
+    if res.kind == "file" and res.is_dir:
+        return "Folder"
+    return _KIND_LABEL.get(res.kind, "")
+
 # Hints shown under the results, built from the bindings actually in force —
 # see _hints(). They used to be literals, which quietly became wrong the moment
 # [keys] could change them.
@@ -205,7 +217,7 @@ class SponuxWindow(Gtk.ApplicationWindow):
             text.append(sub)
         box.append(text)
 
-        badge = Gtk.Label(label=_KIND_LABEL.get(res.kind, ""))
+        badge = Gtk.Label(label=_badge(res))
         badge.add_css_class("sponux-badge")
         badge.set_valign(Gtk.Align.CENTER)
         box.append(badge)

@@ -145,7 +145,7 @@ def control():
         f"Depends: {', '.join(DEPENDS)}\n"
         "Section: x11\n"
         "Priority: optional\n"
-        "Homepage: https://github.com/automatorn/sponux\n"
+        "Homepage: https://github.com/AutoMaTorn/sponux\n"
         f"Description: {m.SUMMARY}\n"
         f"{DESCRIPTION}"
     )

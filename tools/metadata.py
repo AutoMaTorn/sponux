@@ -41,15 +41,31 @@ if not DEB_VERSION.startswith(VERSION + "-"):
 SOURCE_DATE_EPOCH = int(os.environ.get("SOURCE_DATE_EPOCH", RELEASED.timestamp()))
 
 
+# Everywhere the version is written out, and how to find it there. The
+# changelog is compared separately, above, because its version carries a Debian
+# revision. Anything not on this list can drift without anyone noticing, which
+# is exactly what the manual page did until it was added.
+_VERSION_IN = (
+    ("sponux/__init__.py", r'__version__\s*=\s*"([^"]+)"'),
+    # .TH SPONUX 1 "2026-07-26" "sponux 0.1.0" "User Commands"
+    ("packaging/sponux.1", r'^\.TH\s+\S+\s+\d+\s+"[^"]*"\s+"sponux ([^"]+)"'),
+)
+
+
 def check_version_agreement():
-    """__init__.py carries the version too, and nothing else would notice."""
-    text = (SRC / "sponux" / "__init__.py").read_text()
-    found = re.search(r'__version__\s*=\s*"([^"]+)"', text)
-    if found and found.group(1) != VERSION:
-        raise SystemExit(
-            f"sponux/__init__.py says {found.group(1)}, "
-            f"pyproject.toml says {VERSION}"
-        )
+    """Every file that spells the version out has to agree with pyproject."""
+    for rel, pattern in _VERSION_IN:
+        text = (SRC / rel).read_text()
+        found = re.search(pattern, text, re.M)
+        if found is None:
+            raise SystemExit(
+                f"{rel}: no version found — the file changed shape, and the "
+                f"check that keeps it honest cannot see it any more"
+            )
+        if found.group(1) != VERSION:
+            raise SystemExit(
+                f"{rel} says {found.group(1)}, pyproject.toml says {VERSION}"
+            )
 
 
 def payload():

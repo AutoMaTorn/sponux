@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: sponux
-Source: https://github.com/automatorn/sponux
+Source: https://github.com/AutoMaTorn/sponux
 
 Files: *
 Copyright: 2026 automatorn <automatorn@gmail.com>
