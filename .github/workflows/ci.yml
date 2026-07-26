@@ -30,20 +30,24 @@ jobs:
           python3 --version
           python3 -c 'import gi; gi.require_version("Gtk", "4.0"); from gi.repository import Gtk; print(f"GTK {Gtk.get_major_version()}.{Gtk.get_minor_version()}")'
 
-      # None of the suites need a display — checked — so there is no xvfb here.
-      # The timeout is raised because the live index test waits on real inotify
-      # events and a shared runner is slower than a desktop.
+      # None of the suites need a display — checked — so there is no xvfb here,
+      # and nothing waits on the kernel either: tests/test_index.py drives the
+      # indexer directly and keeps one short probe for the real event path.
       - name: Run the checks
-        env:
-          SPONUX_TEST_TIMEOUT: "30"
         run: |
-          status=0
+          failed=""
           for t in tests/test_*.py; do
             echo "::group::$t"
-            python3 "$t" || status=1
+            python3 "$t" || failed="$failed $t"
             echo "::endgroup::"
           done
-          exit $status
+          if [ -n "$failed" ]; then
+            # Named here so the failure is legible from the job summary,
+            # without expanding six collapsed groups to find the red one.
+            echo "::error::failed:$failed"
+            exit 1
+          fi
+          echo "all suites passed"
 
   build:
     runs-on: ubuntu-latest

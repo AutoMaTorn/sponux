@@ -42,13 +42,28 @@ _ARM_CHUNK = 250
 
 
 def connect(readonly: bool = False) -> sqlite3.Connection:
-    config.CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    if readonly and config.INDEX_DB.exists():
+    """A connection to the index. Raises if a readonly one has nothing to open.
+
+    A reader must never create the database, and must never set journal_mode:
+    both take an exclusive lock, and doing either races the very first build.
+    That race is real — it wedged a CI run. The searching side polled while the
+    daemon was building, found no file yet, opened a *writable* connection of
+    its own, and the two of them fought over converting a brand-new database to
+    WAL until one lost with "database is locked". The build was the one that
+    lost, so the index stayed empty until the next full rebuild an hour later.
+
+    Callers of the readonly form already treat a missing index as "no results
+    yet", which is exactly what it is.
+    """
+    if readonly:
         con = sqlite3.connect(
             f"file:{config.INDEX_DB}?mode=ro", uri=True, check_same_thread=False
         )
-    else:
-        con = sqlite3.connect(config.INDEX_DB, check_same_thread=False)
+        con.execute("PRAGMA busy_timeout=3000")
+        return con
+
+    config.CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(config.INDEX_DB, check_same_thread=False)
     # Two writers exist in practice — the daemon's indexer thread and a
     # `sponux --reindex` run alongside it — and SQLite's default is to fail
     # instantly rather than wait for the other one to finish.
