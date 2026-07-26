@@ -17,6 +17,7 @@ import os
 import re
 import shlex
 import tomllib
+from dataclasses import dataclass
 
 from . import config
 
@@ -157,6 +158,106 @@ def command_argv(template, path: str):
     if any(PATH_PLACEHOLDER in arg for arg in argv):
         return [arg.replace(PATH_PLACEHOLDER, path) for arg in argv]
     return argv + [path]
+
+
+@dataclass(frozen=True)
+class WindowSettings:
+    """[window] and [keys], resolved against the defaults in config.py.
+
+    Read afresh every time the launcher is opened, so editing config.toml takes
+    effect without restarting the daemon — the same deal as style.css.
+    """
+    width: int
+    max_results: int
+    debounce: int
+    position: str
+    top_fraction: float
+    hide_on_focus_loss: bool
+    # action -> (keyval, Gdk.ModifierType), already parsed. Actions whose
+    # binding was unreadable keep the default, so this always has every key.
+    keys: dict
+
+
+# Values that are not a number, not a bool, or outside a sane range are
+# reported and ignored rather than being coerced into something surprising.
+_POSITIONS = ("top", "center")
+
+
+def window_settings() -> WindowSettings:
+    section = settings().get("window")
+    if not isinstance(section, dict):
+        section = {}
+
+    def number(key, default, low, high):
+        value = section.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            if value is not None:
+                _complain(f"[window] {key} must be a number, not {value!r}")
+            return default
+        if not low <= value <= high:
+            _complain(f"[window] {key} = {value} is outside {low}–{high}")
+            return default
+        return value
+
+    def flag(key, default):
+        value = section.get(key)
+        if value is None:
+            return default
+        if not isinstance(value, bool):
+            _complain(f"[window] {key} must be true or false, not {value!r}")
+            return default
+        return value
+
+    position = section.get("position")
+    if position is not None and position not in _POSITIONS:
+        _complain(f"[window] position must be one of {', '.join(_POSITIONS)}, "
+                  f"not {position!r}")
+        position = None
+
+    return WindowSettings(
+        # Upper bounds are sanity, not policy: a card wider than any monitor or
+        # a list of 500 results is a typo, not a preference.
+        width=int(number("width", config.WIDTH, 200, 4000)),
+        max_results=int(number("max_results", config.MAX_RESULTS, 1, 50)),
+        debounce=int(number("debounce", config.DEBOUNCE_MS, 0, 2000)),
+        position=position or config.POSITION,
+        top_fraction=float(number("top_fraction", config.TOP_FRACTION, 0.0, 0.9)),
+        hide_on_focus_loss=flag("hide_on_focus_loss", config.HIDE_ON_FOCUS_LOSS),
+        keys=_keys(),
+    )
+
+
+def _keys() -> dict:
+    """[keys] as parsed accelerators, one entry per known action."""
+    from gi.repository import Gtk
+
+    section = settings().get("keys")
+    if not isinstance(section, dict):
+        section = {}
+    for name in section:
+        if name not in config.KEYS:
+            _complain(f"[keys] {name} is not an action; known: "
+                      + ", ".join(sorted(config.KEYS)))
+
+    parsed = {}
+    for action, default in config.KEYS.items():
+        accel = section.get(action)
+        if accel is not None and not isinstance(accel, str):
+            _complain(f"[keys] {action} must be a string, not {accel!r}")
+            accel = None
+        ok, keyval, mods = Gtk.accelerator_parse(accel or default)
+        if not ok or not keyval:
+            # Gtk.accelerator_parse says nothing about what it disliked, so the
+            # message has to carry the example itself.
+            _complain(f"[keys] {action} = {accel!r} is not a key combination; "
+                      f'keeping "{default}". Write them like "<Ctrl>Return".')
+            _, keyval, mods = Gtk.accelerator_parse(default)
+        parsed[action] = (keyval, mods)
+    return parsed
+
+
+def _complain(message: str):
+    print(f"sponux: {CONFIG_FILE}: {message}")
 
 
 def opener_rules():
@@ -414,6 +515,47 @@ STARTER_CONFIG = """\
 # clearly better text match still wins.
 # frecency = true
 # weight = 25
+
+# ---------------------------------------------------------------------------
+# The window itself. Everything here applies the next time you open the
+# launcher — the daemon does not need restarting.
+# ---------------------------------------------------------------------------
+[window]
+# Card width in pixels, and how many results the list shows at once.
+# width = 640
+# max_results = 9
+
+# Where the card sits on the monitor: "top" places it a fraction of the way
+# down, the way Spotlight and rofi do; "center" centres it vertically.
+# position = "top"
+# top_fraction = 0.22
+
+# Dismiss the launcher when it loses focus — clicking elsewhere, or switching
+# windows. Turn it off if you would rather only Escape closed it.
+# hide_on_focus_loss = true
+
+# How long typing has to pause before the search runs, in milliseconds.
+# debounce = 60
+
+# ---------------------------------------------------------------------------
+# Keys. GTK accelerator syntax, the same as i3's bindsym: "<Ctrl>Return",
+# "<Shift><Alt>c", "F2". Check the spelling with `sponux --check`, which
+# reports anything it could not parse.
+#
+# Only these five are configurable. Typing, the arrow keys and Enter are what
+# make this a launcher rather than a keymap, and rebinding them is how you lock
+# yourself out. Escape always closes the window whatever `close` says, for the
+# same reason.
+#
+# A binding is matched against the physical key, so "<Ctrl>c" keeps working
+# when a non-Latin keyboard layout is active.
+# ---------------------------------------------------------------------------
+[keys]
+# reveal = "<Ctrl>Return"      # open the folder containing the selected file
+# copy_path = "<Ctrl>c"        # copy the selected file's path
+# open_with = "<Shift>Return"  # choose an application for this file
+# close = "Escape"             # hide the window
+# quit = "<Ctrl>q"             # stop the daemon
 """
 
 STARTER_STYLE = """\

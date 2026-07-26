@@ -283,6 +283,112 @@ check("it defines the variables the starter file documents",
 check("and names the font on the Entry's inner text node too",
       ".sponux-search > text" in _SHEET, True)
 
+# ---- [window] and [keys] ----------------------------------------------
+#
+# These decide how the launcher behaves rather than what it opens, and the
+# whole point of them living in config.toml is that a mistake there must not
+# take the window down with it: every bad value falls back to the default and
+# says so.
+
+import gi                                          # noqa: E402
+gi.require_version("Gtk", "4.0")                    # noqa: E402
+from gi.repository import Gtk                       # noqa: E402
+
+from sponux import config as spconfig               # noqa: E402
+
+
+def window(toml_text=""):
+    real = userconfig.settings
+    userconfig.settings = lambda: tomllib.loads(toml_text)
+    try:
+        return userconfig.window_settings()
+    finally:
+        userconfig.settings = real
+
+
+def accel(name):
+    ok, keyval, mods = Gtk.accelerator_parse(name)
+    assert ok, name
+    return (keyval, mods)
+
+
+w = window()
+check("no [window] means the defaults from config.py",
+      (w.width, w.max_results, w.debounce, w.position),
+      (spconfig.WIDTH, spconfig.MAX_RESULTS, spconfig.DEBOUNCE_MS,
+       spconfig.POSITION))
+check("and the default bindings", w.keys["copy_path"], accel("<Ctrl>c"))
+check("every action has a binding", sorted(w.keys), sorted(spconfig.KEYS))
+
+w = window("""
+[window]
+width = 900
+max_results = 4
+debounce = 0
+position = "center"
+top_fraction = 0.5
+hide_on_focus_loss = false
+""")
+check("values are taken as written",
+      (w.width, w.max_results, w.debounce, w.position, w.top_fraction,
+       w.hide_on_focus_loss),
+      (900, 4, 0, "center", 0.5, False))
+
+# Each of these is a different way to be wrong, and each must be survivable.
+w = window("""
+[window]
+width = "wide"
+max_results = 0
+debounce = 100000
+position = "middle"
+top_fraction = 3.0
+hide_on_focus_loss = "yes"
+""")
+check("a non-number width falls back", w.width, spconfig.WIDTH)
+check("max_results below the range falls back",
+      w.max_results, spconfig.MAX_RESULTS)
+check("debounce above the range falls back", w.debounce, spconfig.DEBOUNCE_MS)
+check("an unknown position falls back", w.position, spconfig.POSITION)
+check("top_fraction outside 0–0.9 falls back",
+      w.top_fraction, spconfig.TOP_FRACTION)
+check("a non-boolean flag falls back",
+      w.hide_on_focus_loss, spconfig.HIDE_ON_FOCUS_LOSS)
+
+w = window("""
+[keys]
+reveal = "<Ctrl><Alt>o"
+copy_path = "F2"
+""")
+check("a binding is parsed", w.keys["reveal"], accel("<Ctrl><Alt>o"))
+check("a function key needs no modifier", w.keys["copy_path"], accel("F2"))
+check("actions left alone keep their default",
+      w.keys["open_with"], accel("<Shift>Return"))
+
+w = window("""
+[keys]
+close = "not a key"
+quit = 17
+teleport = "<Ctrl>t"
+""")
+check("an unparsable binding keeps the default",
+      w.keys["close"], accel("Escape"))
+check("a non-string binding keeps the default",
+      w.keys["quit"], accel("<Ctrl>q"))
+check("an unknown action does not appear in the table",
+      "teleport" in w.keys, False)
+
+# The window matches a keypress against the physical key as well as the keyval,
+# so a binding written for the Latin layout survives a Cyrillic one. That logic
+# lives in app.py; here we only pin down what it is matching against.
+check("bindings are stored parsed, not as text",
+      all(isinstance(v, tuple) and len(v) == 2 for v in w.keys.values()), True)
+
+# Escape is the way out whatever `close` says — checked in app.py's handler,
+# and asserted here so the guarantee is written down where the config is.
+check("the source keeps Escape as an unconditional escape hatch",
+      "keyval == Gdk.KEY_Escape" in
+      (pathlib.Path(userconfig.__file__).parent / "app.py").read_text(), True)
+
 print()
 if _failures:
     print(f"{len(_failures)} failed: {', '.join(_failures)}")

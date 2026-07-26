@@ -13,12 +13,13 @@ Press a key, type a few letters, press Enter.
 6. [Opening files your way](#opening-files-your-way)
 7. [What the file search can find](#what-the-file-search-can-find)
 8. [Ranking: what you use comes first](#ranking-what-you-use-comes-first)
-9. [Appearance](#appearance)
-10. [Keeping your config in a dotfiles repository](#keeping-your-config-in-a-dotfiles-repository)
-11. [When something is wrong](#when-something-is-wrong)
-12. [Files sponux writes](#files-sponux-writes)
-13. [Uninstalling](#uninstalling)
-14. [Building from source](#building-from-source)
+9. [The window, and the keys](#the-window-and-the-keys)
+10. [Appearance](#appearance)
+11. [Keeping your config in a dotfiles repository](#keeping-your-config-in-a-dotfiles-repository)
+12. [When something is wrong](#when-something-is-wrong)
+13. [Files sponux writes](#files-sponux-writes)
+14. [Uninstalling](#uninstalling)
+15. [Building from source](#building-from-source)
 
 ---
 
@@ -324,6 +325,67 @@ beats a heavily used substring match. `sponux --which PATH` reports what a given
 file has earned.
 
 Set `frecency = false` to rank on the query alone.
+
+## The window, and the keys
+
+Everything here is optional and lives in `config.toml`. All of it applies the
+next time you open the launcher — the daemon does not need restarting.
+
+```toml
+[window]
+width = 640              # card width in pixels
+max_results = 9          # how many rows the list shows at once
+position = "top"         # or "center"
+top_fraction = 0.22      # how far down the monitor "top" is
+hide_on_focus_loss = true
+debounce = 60            # ms of no typing before the search runs
+```
+
+`position = "top"` is the Spotlight placement: the card sits `top_fraction` of
+the way down the monitor, a little above the middle, which reads better than
+dead centre and leaves the results room to grow downwards without the card
+moving. `position = "center"` centres it vertically instead.
+
+`hide_on_focus_loss = false` keeps the launcher open when you click elsewhere,
+so only Escape and the hotkey dismiss it.
+
+### Keys
+
+```toml
+[keys]
+reveal = "<Ctrl>Return"      # open the folder containing the selected file
+copy_path = "<Ctrl>c"        # copy the selected file's path
+open_with = "<Shift>Return"  # choose an application for this file
+close = "Escape"             # hide the window
+quit = "<Ctrl>q"             # stop the daemon
+```
+
+GTK accelerator syntax, the same as i3's `bindsym`: `"<Ctrl>Return"`,
+`"<Shift><Alt>c"`, `"F2"`. `sponux --check` prints what each action ended up
+bound to and reports anything it could not parse — a binding it does not
+understand is ignored, with the default kept, rather than silently doing
+nothing.
+
+Three things are deliberately fixed:
+
+- **Typing, the arrow keys and Enter.** They are what make this a launcher
+  rather than a keymap, and rebinding them is how you lock yourself out.
+- **Escape always closes the window**, whatever `close` says. A typo in
+  `config.toml` cannot leave you with no way out.
+- **`unmanaged`** — the X11 override-redirect trick described under
+  [Binding a hotkey](#binding-a-hotkey) — is not here. It is applied once, when
+  the window is created, so unlike everything else it could not take effect
+  without a restart; it lives in `sponux/config.py` for the rare case of a
+  window manager that needs it turned off.
+
+The hint line under the results is generated from the bindings actually in
+force, so after rebinding anything it tells you the truth rather than the
+defaults.
+
+A binding is matched against the **physical key**, not just the symbol the
+keyboard produced. So `"<Ctrl>c"` keeps working while a Cyrillic, Greek or any
+other non-Latin layout is active — where that key would otherwise deliver
+Cyrillic *es* and match nothing.
 
 ## Appearance
 

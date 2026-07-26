@@ -28,11 +28,6 @@ try:
 except (ValueError, ImportError):  # pragma: no cover - non-X11 builds
     GdkX11 = None
 
-# Top edge of the card as a fraction of the monitor height. Sitting a little
-# above the middle reads better than dead centre, and leaves room for the
-# results list to grow downwards without the card ever moving.
-TOP_FRACTION = 0.22
-
 _XA_ATOM = 4
 _PROP_MODE_REPLACE = 0
 _CW_OVERRIDE_REDIRECT = 1 << 9
@@ -305,26 +300,45 @@ def center(window):
         return
 
     scale = mon.get_scale_factor() or 1
+    settings = getattr(window, "settings", None)
     x, y = card_position(
         mon.get_geometry(),
         window.get_width() or window.get_default_size()[0],
         window.get_height(),
+        position=settings.position if settings else None,
+        top_fraction=settings.top_fraction if settings else None,
     )
     lib.XMoveWindow(dpy, xid, x * scale, y * scale)
     lib.XFlush(dpy)
 
 
-def card_position(geo, width, height):
+def card_position(geo, width, height, position=None, top_fraction=None):
     """Top-left of the card on a monitor, in that monitor's coordinates.
+
+    `position` is "top" — the Spotlight placement, `top_fraction` of the way
+    down — or "center", which centres the card vertically on the monitor.
+    Both default to [window] in config.py.
 
     Kept free of X11 and GDK so the arithmetic can be checked directly; see
     tests/test_placement.py.
     """
+    if position is None:
+        position = config.POSITION
+    if top_fraction is None:
+        top_fraction = config.TOP_FRACTION
+
     x = geo.x + (geo.width - width) // 2
-    y = geo.y + int(geo.height * TOP_FRACTION)
+    if position == "center":
+        # Centring uses the card's real height, which is 0 until the window has
+        # been allocated; on that first pass fall back to the top placement so
+        # the card does not flash at the very top of the screen.
+        y = (geo.y + (geo.height - height) // 2 if height
+             else geo.y + int(geo.height * top_fraction))
+    else:
+        y = geo.y + int(geo.height * top_fraction)
     # Never let the card hang off the monitor it was placed on: a portrait or
     # small monitor can be narrower than the card, and a short one shorter than
-    # 22% plus a full results list. Height is 0 until the window is allocated.
+    # the offset plus a full results list. Height is 0 until allocation.
     x = max(geo.x, x)
     if height:
         y = max(geo.y, min(y, geo.y + geo.height - height))

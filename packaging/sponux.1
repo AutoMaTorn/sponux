@@ -86,6 +86,13 @@ Ctrl+Q@quit the daemon
 .TE
 .PP
 The keys that apply to the selected result are shown under the results.
+The four modifier actions and
+.B Ctrl+Q
+can be rebound in
+.BR [keys] ;
+see
+.B FILES
+below.
 .SH QUERIES
 A prefix restricts the search to one kind of result; a leading
 .B /
@@ -126,6 +133,25 @@ A typed path always outranks every search result.
 .I ~/.config/sponux/config.toml
 Behaviour: which application opens what, what the index covers, ranking.
 Optional; edits apply the next time the window is opened, with no restart.
+.PP
+.B [window]
+sets the card's width, how many results it shows,
+.B position
+(\fBtop\fP or \fBcenter\fP), whether losing focus dismisses it, and the typing
+debounce.
+.B [keys]
+rebinds five actions \(em
+.BR reveal ", " copy_path ", " open_with ", " close " and " quit
+\(em in GTK accelerator syntax, the same as i3's
+.BR bindsym :
+.BR "<Ctrl>Return" ", " "<Shift><Alt>c" ", " F2 .
+Typing, the arrow keys and Enter are not configurable, and Escape closes the
+window whatever
+.B close
+says, so a mistake here cannot lock you out.
+A binding is matched against the physical key, so
+.B <Ctrl>c
+keeps working under a non-Latin keyboard layout.
 .TP
 .I ~/.config/sponux/style.css
 Appearance, layered on top of the bundled dark stylesheet.

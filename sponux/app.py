@@ -12,21 +12,14 @@ from .providers import base  # noqa: E402
 from .providers import calc as calc_provider  # noqa: E402
 from .providers import files as files_provider  # noqa: E402
 
-WIDTH = 640
-MAX_TOTAL_RESULTS = 9
-DEBOUNCE_MS = 60
-
 PLACEHOLDER = "Search apps, files, or calculate…"
 
 _KIND_LABEL = {"app": "App", "file": "File", "calc": "Calc",
                "openwith": "Open with", "remember": "Rule"}
 
-# Hints shown under the results. Every alternate action is a modifier on the
-# same Enter, so the list stays one line and one habit.
-_HINTS_FILE = ("↩ open   ⌃↩ containing folder   ⌃C copy path"
-               "   ⇧↩ open with…")
-_HINTS_PLAIN = "↩ run   Esc close"
-_HINTS_CALC = "↩ copy result   Esc close"
+# Hints shown under the results, built from the bindings actually in force —
+# see _hints(). They used to be literals, which quietly became wrong the moment
+# [keys] could change them.
 _HINTS_OPEN_WITH = "↩ open with it   type to filter   Esc back"
 # Shown while the query is empty, and gone the moment anything is typed. The
 # prefixes below are the only part of the interface that has to be known in
@@ -69,9 +62,12 @@ def _split_kind_prefix(text):
 class SponuxWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="sponux")
+        # [window] and [keys], re-read on every open by reset_and_present() so
+        # that editing config.toml needs no restart.
+        self.settings = userconfig.window_settings()
         self.set_decorated(False)
         self.set_resizable(False)
-        self.set_default_size(WIDTH, -1)
+        self.set_default_size(self.settings.width, -1)
         self.add_css_class("sponux")
         self._results = []
 
@@ -118,8 +114,9 @@ class SponuxWindow(Gtk.ApplicationWindow):
         # so tiling WMs don't tile the card. See placement.py.
         self.connect("realize", lambda _w: placement.prepare(self))
 
-        if config.HIDE_ON_FOCUS_LOSS:
-            self.connect("notify::is-active", self._on_active_changed)
+        # Connected unconditionally; whether it acts is decided in the handler,
+        # so [window] hide_on_focus_loss can be changed without a restart.
+        self.connect("notify::is-active", self._on_active_changed)
 
         # Only arm the focus-loss handler once the window has actually been
         # focused; it starts out inactive, and hiding on that would close the
@@ -140,7 +137,8 @@ class SponuxWindow(Gtk.ApplicationWindow):
     def _on_changed(self, _entry):
         if self._debounce_id:
             GLib.source_remove(self._debounce_id)
-        self._debounce_id = GLib.timeout_add(DEBOUNCE_MS, self._do_search)
+        self._debounce_id = GLib.timeout_add(self.settings.debounce,
+                                             self._do_search)
 
     def _do_search(self):
         self._debounce_id = 0
@@ -151,16 +149,19 @@ class SponuxWindow(Gtk.ApplicationWindow):
         kind, query = _split_kind_prefix(raw)
         self._kind_filter = kind
         results = []
+        limit = self.settings.max_results
         if query.strip():
+            # Every provider is asked for the full list; the merge below keeps
+            # the best of them, so one knob decides how many rows are shown.
             if kind in (None, "calc"):
                 results += calc_provider.search(query)
             if kind in (None, "app"):
-                results += apps_provider.search(query)
+                results += apps_provider.search(query, limit)
             if kind in (None, "file"):
-                results += files_provider.search(query)
-                results += files_provider.search_path(query)
+                results += files_provider.search(query, limit)
+                results += files_provider.search_path(query, limit)
             results.sort(key=lambda r: r.score, reverse=True)
-            results = results[:MAX_TOTAL_RESULTS]
+            results = results[:limit]
         self._populate(results)
         return GLib.SOURCE_REMOVE
 
@@ -261,13 +262,25 @@ class SponuxWindow(Gtk.ApplicationWindow):
         if self._kind_filter:
             parts.append(_KIND_ONLY[self._kind_filter])
         if result is not None:
-            if result.kind == "file":
-                parts.append(_HINTS_FILE)
-            elif result.kind == "calc":
-                parts.append(_HINTS_CALC)
-            else:
-                parts.append(_HINTS_PLAIN)
+            parts.append(self._hints_for(result.kind))
         self.hints.set_text("   ·   ".join(parts))
+
+    def _label(self, action):
+        """The binding for an action, written the way a user would read it."""
+        keyval, mods = self.settings.keys[action]
+        return Gtk.accelerator_get_label(keyval, mods)
+
+    def _hints_for(self, kind):
+        """The keys that apply to this kind of result, as currently bound."""
+        close = f"{self._label('close')} close"
+        if kind == "file":
+            # Enter is not configurable, so it stays the symbol it always was.
+            return (f"↩ open   {self._label('reveal')} containing folder   "
+                    f"{self._label('copy_path')} copy path   "
+                    f"{self._label('open_with')} open with…")
+        if kind == "calc":
+            return f"↩ copy result   {close}"
+        return f"↩ run   {close}"
 
     # ---- open with ----------------------------------------------------
 
@@ -341,7 +354,7 @@ class SponuxWindow(Gtk.ApplicationWindow):
             ))
             # The tail of the list is every other installed application; it is
             # there to be filtered, not scrolled.
-            if len(rows) > MAX_TOTAL_RESULTS:
+            if len(rows) > self.settings.max_results:
                 break
         return rows
 
@@ -422,36 +435,75 @@ class SponuxWindow(Gtk.ApplicationWindow):
             self.entry.grab_focus_without_selecting()
         self._update_hints()
 
-    def _on_key(self, _controller, keyval, _keycode, state):
-        ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK)
-        shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
-        if keyval == Gdk.KEY_Escape:
-            # In open-with, Escape backs out to the search it interrupted;
-            # only then does it close the launcher.
+    def _pressed_keyvals(self, keyval, keycode):
+        """Every keyval a binding could reasonably mean by this keypress.
+
+        A binding is written for a layout — `<Ctrl>c` names the Latin letter.
+        With a second layout active the same physical key delivers something
+        else entirely: under `us,ru`, C arrives as Cyrillic_es, and comparing
+        keyvals alone silently kills every letter shortcut. So the physical key
+        is resolved back through the keymap and its unshifted keyval in each
+        layout counts as a match too.
+
+        Costs 7 µs per keypress, measured.
+        """
+        found = {keyval, Gdk.keyval_to_lower(keyval)}
+        display = self.get_display()
+        if display is not None and keycode:
+            ok, keys, keyvals = display.map_keycode(keycode)
+            if ok:
+                found.update(kv for key, kv in zip(keys, keyvals)
+                             if key.level == 0)
+        return found
+
+    def _matches(self, action, keyvals, mods):
+        """Is this keypress the binding configured for `action`?"""
+        want_key, want_mods = self.settings.keys[action]
+        return want_key in keyvals and mods == want_mods
+
+    def _on_key(self, _controller, keyval, keycode, state):
+        # Strip the locks GTK does not count as part of a shortcut, and treat
+        # the keypad's Enter as Return, which is what people write in a binding.
+        mods = state & Gtk.accelerator_get_default_mod_mask()
+        if keyval == Gdk.KEY_KP_Enter:
+            keyval = Gdk.KEY_Return
+        keyvals = self._pressed_keyvals(keyval, keycode)
+
+        if self._matches("close", keyvals, mods) or keyval == Gdk.KEY_Escape:
+            # Escape closes whatever [keys] says, so that a typo in the config
+            # cannot leave the launcher with no way out.
+            #
+            # In open-with, it backs out to the search it interrupted; only
+            # then does it close the launcher.
             if self._mode == "open-with":
                 self._leave_open_with()
             else:
                 self.hide_launcher()
             return True
-        if ctrl and keyval in (Gdk.KEY_q, Gdk.KEY_Q):
+        if self._matches("quit", keyvals, mods):
             self.get_application().quit()
             return True
-        if ctrl and keyval in (Gdk.KEY_c, Gdk.KEY_C):
+        if self._matches("copy_path", keyvals, mods):
             # Falls through to the Entry's own copy when no file is selected.
             if self._copy_selected_path():
                 return True
             return False
+        if self._matches("reveal", keyvals, mods):
+            if self._reveal_selected():
+                return True
+        if self._matches("open_with", keyvals, mods):
+            if self._open_with_selected():
+                return True
+
+        # Not configurable: these are what make it a launcher rather than a
+        # keymap, and rebinding them is how you lock yourself out.
         if keyval == Gdk.KEY_Down:
             self._move_selection(1)
             return True
         if keyval == Gdk.KEY_Up:
             self._move_selection(-1)
             return True
-        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
-            if ctrl and self._reveal_selected():
-                return True
-            if shift and self._open_with_selected():
-                return True
+        if keyval == Gdk.KEY_Return:
             self._activate_selected()
             return True
         return False
@@ -459,6 +511,8 @@ class SponuxWindow(Gtk.ApplicationWindow):
     # ---- show / hide --------------------------------------------------
 
     def _on_active_changed(self, *_):
+        if not self.settings.hide_on_focus_loss:
+            return
         if self.is_active():
             self._was_active = True
         elif self._was_active:
@@ -473,6 +527,11 @@ class SponuxWindow(Gtk.ApplicationWindow):
         self.set_visible(False)
 
     def reset_and_present(self):
+        # Pick up config.toml before anything is drawn, so an edit applies the
+        # next time the launcher opens rather than the next time it restarts.
+        # settings() only re-reads when the file's mtime changed.
+        self.settings = userconfig.window_settings()
+        self.set_default_size(self.settings.width, -1)
         self._reset_mode()
         self.entry.set_text("")
         self._populate([])

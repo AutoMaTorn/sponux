@@ -50,6 +50,10 @@ HANDOFF.md
 # message — so it does not belong inside it.
 PUBLISHING.md
 
+# Plans, kept private on purpose: measured costs, what was already decided
+# against, and an order to take things in. Promising none of it in public.
+ROADMAP.md
+
 # Screenshots from tools/visual.py, if pointed at the repository root. Scoped to
 # the root on purpose: an unanchored pattern would also swallow anything named
 # shot-*.png under docs/images/, which is where the README's assets live.

@@ -108,7 +108,9 @@ memorised.
 
 Configuration is two optional files in `~/.config/sponux/` — `config.toml` for
 behaviour, `style.css` for appearance. `sponux --write-config` writes commented
-starters.
+starters. `[window]` sets the card's width, result count and placement;
+`[keys]` rebinds the modifier actions. Edits apply on the next open, with no
+restart.
 
 ```sh
 sponux --which ~/.config/i3/config   # what would open this, and why

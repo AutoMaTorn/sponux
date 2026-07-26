@@ -134,6 +134,32 @@ check("a card taller than the monitor sticks to the top edge",
 check("height 0 (not yet allocated) skips the vertical clamp",
       placement.card_position(Geo(0, 0, 1920, 800), CARD, 0), (640, 176))
 
+
+# ---- [window] position ------------------------------------------------
+
+_FULL = Geo(0, 0, 2160, 1440)
+
+check("position defaults to top, a fraction of the way down",
+      placement.card_position(_FULL, CARD, 400), (760, 316))
+check("…which is what asking for it explicitly does",
+      placement.card_position(_FULL, CARD, 400, position="top"), (760, 316))
+check("center puts the card's middle on the monitor's middle",
+      placement.card_position(_FULL, CARD, 400, position="center"), (760, 520))
+check("top_fraction moves the top placement and nothing else",
+      placement.card_position(_FULL, CARD, 400, position="top",
+                              top_fraction=0.4), (760, 576))
+check("top_fraction does not affect centring",
+      placement.card_position(_FULL, CARD, 400, position="center",
+                              top_fraction=0.4), (760, 520))
+# Height is 0 on the first pass, before the window has been allocated. Centring
+# on a height of 0 would put the card halfway down and then jump it upwards once
+# the real height arrived, so it falls back to the top placement for that pass.
+check("centring with no height yet falls back to the top placement",
+      placement.card_position(_FULL, CARD, 0, position="center"), (760, 316))
+check("a centred card taller than the monitor still clamps to the top edge",
+      placement.card_position(Geo(0, 0, 1920, 300), CARD, 400,
+                              position="center"), (640, 0))
+
 print()
 if _failures:
     print(f"{len(_failures)} failed: {', '.join(_failures)}")

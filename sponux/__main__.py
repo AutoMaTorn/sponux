@@ -174,6 +174,37 @@ def _check():
     else:
         print("  note    frecency off; results are ranked on the query alone")
 
+    # [window] and [keys] report their own problems while being read, so any
+    # complaint has already been printed above by the time we get here; what is
+    # left to show is what actually ended up in force.
+    from gi.repository import Gtk
+    window = userconfig.window_settings()
+    print("\n[window]")
+    print(f"  ok      {window.width}px wide, {window.max_results} results, "
+          f"{window.debounce}ms debounce")
+    where = ("centred vertically" if window.position == "center"
+             else f"{window.top_fraction:.0%} down the monitor")
+    print(f"  ok      position {window.position} — {where}")
+    if not window.hide_on_focus_loss:
+        print("  note    stays open when it loses focus; only Escape and the "
+              "hotkey dismiss it")
+
+    print("\n[keys]")
+    seen = {}
+    for action in sorted(window.keys):
+        keyval, mods = window.keys[action]
+        label = Gtk.accelerator_get_label(keyval, mods)
+        print(f"  ok      {action} -> {label}")
+        seen.setdefault((keyval, mods), []).append(action)
+    for actions in seen.values():
+        if len(actions) > 1:
+            # Both are reachable in principle, but only the first one _on_key
+            # tests will ever fire, so say which wins rather than let it be a
+            # mystery.
+            print(f"  WARN    {' and '.join(sorted(actions))} share one "
+                  "binding; the earlier of them wins")
+            warnings += 1
+
     print()
     if problems:
         print(f"{problems} problem(s), {warnings} warning(s)")

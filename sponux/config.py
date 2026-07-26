@@ -69,8 +69,48 @@ WATCH_FILESYSTEM = True
 # this many directories the periodic rebuild covers the rest.
 MAX_WATCHES = 8192
 
-# Max results shown per provider.
-MAX_RESULTS = 8
+# --- the window -------------------------------------------------------
+#
+# Defaults for the [window] and [keys] sections of config.toml; the sections
+# only override. Read through userconfig.window_settings(), which re-reads them
+# whenever the file changes, so editing config.toml takes effect the next time
+# the launcher is opened.
+
+# How many results the list shows at once, across all providers. Each provider
+# is asked for this many and the merge keeps the best.
+MAX_RESULTS = 9
+
+# Card width in pixels. Its height follows the number of results.
+WIDTH = 640
+
+# How long typing has to pause before the search runs, in milliseconds. Long
+# enough that a fast typist searches once instead of once per letter, short
+# enough not to feel laggy.
+DEBOUNCE_MS = 60
+
+# Where the card sits: "top" puts it TOP_FRACTION of the way down the monitor,
+# the way Spotlight and rofi do; "center" centres it vertically.
+#
+# Sitting a little above the middle reads better than dead centre, and leaves
+# room for the results list to grow downwards without the card ever moving.
+POSITION = "top"
+TOP_FRACTION = 0.22
+
+# Hide the window as soon as it loses focus — i.e. clicking outside it, or
+# switching to another window, dismisses the launcher (rofi's click-to-exit).
+HIDE_ON_FOCUS_LOSS = True
+
+# What the modifier keys do, as GTK accelerator strings — the same syntax as
+# `gtk-accel` and i3's `bindsym`. Overridable per action in [keys].
+# The arrows, Enter and typing itself are deliberately not configurable: they
+# are what makes it a launcher rather than a keymap.
+KEYS = {
+    "reveal": "<Ctrl>Return",       # open the folder containing the file
+    "copy_path": "<Ctrl>c",         # copy the selected file's path
+    "open_with": "<Shift>Return",   # choose an application for this file
+    "close": "Escape",              # hide the window
+    "quit": "<Ctrl>q",              # stop the daemon
+}
 
 # Rank things you actually open above things that merely match as well. The
 # weight is the most a result can gain from its history; fuzzy_score() runs
@@ -82,12 +122,13 @@ FRECENCY_WEIGHT = 25.0
 # Entries kept in the usage database; the least recently used go first.
 MAX_USAGE_ENTRIES = 5000
 
-# Hide the window as soon as it loses focus — i.e. clicking outside it, or
-# switching to another window, dismisses the launcher (rofi's click-to-exit).
-HIDE_ON_FOCUS_LOSS = True
-
 # Bypass the window manager entirely (X11 override-redirect), the way rofi
 # does by default. The launcher then never becomes the WM's focused window,
 # so a tiling WM leaves its focus highlight on whatever you were working in.
 # Requires claiming input focus ourselves; see placement.take_input().
+#
+# Deliberately NOT in config.toml, unlike everything above. It is applied once,
+# when the X11 window is created, so it could not be changed without a restart
+# while every other setting takes effect on the next open — and it is a knob for
+# making the launcher behave under an unusual WM, not a daily preference.
 UNMANAGED_WINDOW = True
