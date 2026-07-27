@@ -32,7 +32,7 @@ library.
 **Debian / Ubuntu.** The package declares those dependencies, so this is all:
 
 ```sh
-sudo apt install ./sponux_0.1.0-1_all.deb
+sudo apt install ./sponux_0.2.0-1_all.deb
 ```
 
 **Anywhere else** there is nothing to install. Install the two system packages,
@@ -40,8 +40,8 @@ unpack sponux wherever you keep such things, and run it from there:
 
 ```sh
 sudo pacman -S python-gobject gtk4        # Arch; use your own package manager
-tar xf sponux-0.1.0.tar.gz -C ~/opt
-~/opt/sponux-0.1.0/bin/sponux
+tar xf sponux-0.2.0.tar.gz -C ~/opt
+~/opt/sponux-0.2.0/bin/sponux
 ```
 
 Cloning the repository instead works the same way, if you would rather track it
@@ -49,12 +49,12 @@ with git.
 
 `bin/sponux` finds the package next to itself, so this needs no root, no
 `PATH` changes and no uninstall procedure — to remove it, delete the directory.
-Bind your hotkey to the full path (`~/opt/sponux-0.1.0/bin/sponux`) and
+Bind your hotkey to the full path (`~/opt/sponux-0.2.0/bin/sponux`) and
 everything in this guide works the same.
 
 The archive holds only what is needed to run sponux, so there is no man page on
 your manpath — read it in place with
-`man -l ~/opt/sponux-0.1.0/packaging/sponux.1`.
+`man -l ~/opt/sponux-0.2.0/packaging/sponux.1`.
 
 It is the same wrapper the `.deb` installs as `/usr/bin/sponux`; the only
 difference is where it finds the package.
@@ -552,7 +552,7 @@ compositor. Everything else works.
 
 ```sh
 sudo apt remove sponux           # if you installed the .deb
-rm -rf ~/opt/sponux-0.1.0        # if you unpacked the archive
+rm -rf ~/opt/sponux-0.2.0        # if you unpacked the archive
 ```
 
 Neither touches your configuration, index or history. To remove those too:
@@ -586,9 +586,9 @@ builders are plain standard-library Python.
 ```sh
 git clone https://github.com/AutoMaTorn/sponux && cd sponux
 
-python3 tools/mkdeb.py         # dist/sponux_0.1.0-1_all.deb
-python3 tools/mktarball.py     # dist/sponux-0.1.0.tar.gz
-python3 tools/mkwheel.py       # dist/sponux-0.1.0-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.2.0-1_all.deb
+python3 tools/mktarball.py     # dist/sponux-0.2.0.tar.gz
+python3 tools/mkwheel.py       # dist/sponux-0.2.0-py3-none-any.whl
 ```
 
 | Which one | For |
@@ -614,7 +614,7 @@ byte-identical files. That means you can check an artifact somebody handed you
 against one you built yourself:
 
 ```sh
-sha256sum dist/sponux-0.1.0.tar.gz
+sha256sum dist/sponux-0.2.0.tar.gz
 ```
 
 **Changing the version** means editing three files: `pyproject.toml`,

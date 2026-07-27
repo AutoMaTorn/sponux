@@ -1,3 +1,17 @@
+sponux (0.2.0-1) unstable; urgency=medium
+
+  * Runtime problems are recorded in ~/.local/state/sponux/sponux.log instead
+    of a stderr that a hotkey-launched process does not have; the failures a
+    user can act on also raise a desktop notification.
+  * Ships its own icon rather than borrowing the theme's system-search.
+  * --check gained three sections: which installation is answering on the
+    session bus (a package and a source checkout share one name), what starts
+    the daemon, and the tail of the runtime log.
+  * A fresh install says what it is for: the first few opens ask for sponux to
+    be bound to a key.
+
+ -- automatorn <automatorn@gmail.com>  Mon, 27 Jul 2026 17:00:00 +0300
+
 sponux (0.1.0-1) unstable; urgency=medium
 
   * Initial release: application, file and calculator search in a resident

@@ -33,7 +33,7 @@ Python.
 одной команды:
 
 ```sh
-sudo apt install ./sponux_0.1.0-1_all.deb
+sudo apt install ./sponux_0.2.0-1_all.deb
 ```
 
 **Где угодно ещё** устанавливать нечего. Поставьте два системных пакета,
@@ -41,8 +41,8 @@ sudo apt install ./sponux_0.1.0-1_all.deb
 
 ```sh
 sudo pacman -S python-gobject gtk4        # Arch; используйте свой пакетный менеджер
-tar xf sponux-0.1.0.tar.gz -C ~/opt
-~/opt/sponux-0.1.0/bin/sponux
+tar xf sponux-0.2.0.tar.gz -C ~/opt
+~/opt/sponux-0.2.0/bin/sponux
 ```
 
 Клонировать репозиторий вместо этого — то же самое, если вам удобнее следить за
@@ -50,12 +50,12 @@ tar xf sponux-0.1.0.tar.gz -C ~/opt
 
 `bin/sponux` находит пакет рядом с собой, поэтому не нужны ни root, ни правка
 `PATH`, ни процедура удаления — чтобы удалить, сотрите каталог. Привяжите
-горячую клавишу к полному пути (`~/opt/sponux-0.1.0/bin/sponux`), и всё в этом
+горячую клавишу к полному пути (`~/opt/sponux-0.2.0/bin/sponux`), и всё в этом
 руководстве работает точно так же.
 
 Архив несёт только то, что нужно для запуска, поэтому man-страницы в вашем
 manpath не будет — читайте её на месте:
-`man -l ~/opt/sponux-0.1.0/packaging/sponux.1`.
+`man -l ~/opt/sponux-0.2.0/packaging/sponux.1`.
 
 Это та же обёртка, которую `.deb` ставит как `/usr/bin/sponux`; разница только
 в том, где она находит пакет.
@@ -568,7 +568,7 @@ sponux --daemon          # или /путь/к/исходникам/bin/sponux -
 
 ```sh
 sudo apt remove sponux           # если ставили .deb
-rm -rf ~/opt/sponux-0.1.0        # если распаковывали архив
+rm -rf ~/opt/sponux-0.2.0        # если распаковывали архив
 ```
 
 Ни то, ни другое не трогает ваши конфиги, индекс и историю. Чтобы убрать и их:
@@ -603,9 +603,9 @@ rm -rf ~/.config/sponux ~/.cache/sponux ~/.local/state/sponux
 ```sh
 git clone https://github.com/AutoMaTorn/sponux && cd sponux
 
-python3 tools/mkdeb.py         # dist/sponux_0.1.0-1_all.deb
-python3 tools/mktarball.py     # dist/sponux-0.1.0.tar.gz
-python3 tools/mkwheel.py       # dist/sponux-0.1.0-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.2.0-1_all.deb
+python3 tools/mktarball.py     # dist/sponux-0.2.0.tar.gz
+python3 tools/mkwheel.py       # dist/sponux-0.2.0-py3-none-any.whl
 ```
 
 | Что именно | Для чего |
@@ -630,7 +630,7 @@ for t in tests/test_*.py; do python3 "$t" || break; done
 сверить артефакт, который вам кто-то передал, с тем, что вы собрали сами:
 
 ```sh
-sha256sum dist/sponux-0.1.0.tar.gz
+sha256sum dist/sponux-0.2.0.tar.gz
 ```
 
 **Смена версии** — это правка трёх файлов: `pyproject.toml`,
