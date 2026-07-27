@@ -88,7 +88,7 @@ with contextlib.redirect_stderr(io.StringIO()):
     report.note("wrote [open] py to config.toml")
 check("note() is recorded as well as problem()",
       "wrote [open] py" in report.log_lines()[-1], True)
-check("log_lines(limit) returns the tail", len(report.log_lines(1)), 1)
+check("both are in the log now", len(report.log_lines()), 2)
 
 # ---- a message repeating in a loop cannot fill the disk --------------------
 

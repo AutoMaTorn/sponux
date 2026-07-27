@@ -73,16 +73,12 @@ def problem(message: str, notify: bool = False):
     _emit(message, notify=notify)
 
 
-def log_lines(limit: int = 0):
-    """The log as a list of lines, newest last. Empty if there is none.
-
-    `limit` keeps only the last N. For --check, and for the tests.
-    """
+def log_lines():
+    """The log as a list of lines, newest last. Empty if there is none."""
     try:
-        lines = config.LOG_FILE.read_text(errors="replace").splitlines()
+        return config.LOG_FILE.read_text(errors="replace").splitlines()
     except OSError:
         return []
-    return lines[-limit:] if limit else lines
 
 
 def _emit(message: str, notify: bool):

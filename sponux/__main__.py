@@ -149,10 +149,10 @@ def _import_root(environ: dict, cwd, argv):
     layouts; the rest is for a daemon someone started by hand.
     """
     import os
-    from pathlib import Path
 
     def holds_package(directory):
-        return directory and Path(directory, "sponux", "__main__.py").is_file()
+        return bool(directory) and os.path.isfile(
+            os.path.join(directory, "sponux", "__main__.py"))
 
     for entry in (environ.get("PYTHONPATH") or "").split(os.pathsep):
         if holds_package(entry):
@@ -164,10 +164,10 @@ def _import_root(environ: dict, cwd, argv):
 
     # `python3 /path/to/sponux/__main__.py` names it outright.
     for arg in argv[1:]:
-        if arg.endswith(".py") and Path(arg).name == "__main__.py":
-            root = Path(arg).resolve().parent.parent
+        if os.path.basename(arg) == "__main__.py":
+            root = os.path.dirname(os.path.dirname(os.path.abspath(arg)))
             if holds_package(root):
-                return str(root)
+                return root
     return None
 
 
@@ -178,11 +178,12 @@ def _version_at(root):
     point here is to identify an installation that may well be older than the
     one asking.
     """
+    import os
     import re
-    from pathlib import Path
 
     try:
-        text = Path(root, "sponux", "__init__.py").read_text()
+        with open(os.path.join(root, "sponux", "__init__.py")) as fh:
+            text = fh.read()
     except OSError:
         return None
     match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
@@ -196,7 +197,6 @@ def _daemon_facts():
     is not: /proc is readable only for one's own processes.
     """
     import os
-    from pathlib import Path
     from gi.repository import Gio, GLib
 
     from . import config
@@ -214,14 +214,14 @@ def _daemon_facts():
         # NameHasNoOwner is the ordinary case: no daemon is running.
         return None, None, exc.message
 
-    proc = Path("/proc") / str(pid)
+    proc = f"/proc/{pid}"
     try:
-        environ = dict(
-            kv.split("=", 1)
-            for kv in (proc / "environ").read_text().split("\0") if "=" in kv
-        )
-        argv = (proc / "cmdline").read_bytes().decode().split("\0")
-        cwd = os.readlink(proc / "cwd")
+        with open(f"{proc}/environ") as fh:
+            environ = dict(kv.split("=", 1)
+                           for kv in fh.read().split("\0") if "=" in kv)
+        with open(f"{proc}/cmdline") as fh:
+            argv = fh.read().split("\0")
+        cwd = os.readlink(f"{proc}/cwd")
     except OSError as exc:
         return pid, None, str(exc)
     return pid, _import_root(environ, cwd, argv), ""
@@ -236,11 +236,10 @@ def _check_daemon():
     change of yours seems to have done nothing.
     """
     import os
-    from pathlib import Path
 
     from . import config
 
-    here = str(Path(__file__).resolve().parent.parent)
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     print(f"\ndaemon — this tree is {here} ({_version_at(here) or 'version?'})")
 
     pid, root, why = _daemon_facts()
