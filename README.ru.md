@@ -153,6 +153,7 @@ python3 tests/test_config.py      # правила [open], запись конф
 python3 tests/test_usage.py       # кривая frecency и её влияние на результаты
 python3 tests/test_query.py       # префиксы вида и дополнение набранного пути
 python3 tests/test_report.py      # журнал работы: границы и запрет на собственные сбои
+python3 tests/test_daemon.py      # какая установка, по словам --check, отвечает
 python3 tests/test_docs.py        # два руководства: паритет, ссылки, задокументированные флаги
 python3 tools/bench.py installed  # задержка открытия установленного sponux
 python3 tools/visual.py /tmp/shots  # снимок настоящего окна

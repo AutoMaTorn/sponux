@@ -490,8 +490,10 @@ xwininfo -root -tree | grep '"sponux"'
 **It seems to be running an old version.** You may have two installations — one
 from a package on `PATH` and one in a source checkout. They share a single name
 on the session bus, so whichever daemon started first answers every keypress.
-Open the launcher, press `Ctrl+Q` to stop that daemon, then start the one you
-want:
+`sponux --check` says which one that is, with its pid, the directory it imports
+from and that copy's version, and warns when it is not the tree you are asking
+from. Open the launcher, press `Ctrl+Q` to stop that daemon, then start the one
+you want:
 
 ```sh
 sponux --daemon          # or /path/to/checkout/bin/sponux --daemon

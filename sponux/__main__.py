@@ -102,8 +102,133 @@ def _check():
     hotkey or at login and had no terminal to complain to.
     """
     rc = _check_config()
+    _check_daemon()
     _check_log()
     return rc
+
+
+def _import_root(environ: dict, cwd, argv):
+    """Which directory a running daemon imported the sponux package from.
+
+    Pure, so the awkward part can be tested without a daemon. The wrapper
+    exports PYTHONPATH, which is the answer in both installed and checkout
+    layouts; the rest is for a daemon someone started by hand.
+    """
+    import os
+    from pathlib import Path
+
+    def holds_package(directory):
+        return directory and Path(directory, "sponux", "__main__.py").is_file()
+
+    for entry in (environ.get("PYTHONPATH") or "").split(os.pathsep):
+        if holds_package(entry):
+            return entry
+
+    # `python3 -m sponux` without -P imports from the working directory.
+    if "-P" not in argv and holds_package(cwd):
+        return cwd
+
+    # `python3 /path/to/sponux/__main__.py` names it outright.
+    for arg in argv[1:]:
+        if arg.endswith(".py") and Path(arg).name == "__main__.py":
+            root = Path(arg).resolve().parent.parent
+            if holds_package(root):
+                return str(root)
+    return None
+
+
+def _version_at(root):
+    """The version of the package in `root`, read off disk. None if unreadable.
+
+    Asking the daemon would be better, but it exposes no such call, and the
+    point here is to identify an installation that may well be older than the
+    one asking.
+    """
+    import re
+    from pathlib import Path
+
+    try:
+        text = Path(root, "sponux", "__init__.py").read_text()
+    except OSError:
+        return None
+    match = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+    return match.group(1) if match else None
+
+
+def _daemon_facts():
+    """(pid, import root, why the root is unknown) for the daemon on the bus.
+
+    pid is None when nothing owns the name. The root can be None while the pid
+    is not: /proc is readable only for one's own processes.
+    """
+    import os
+    from pathlib import Path
+    from gi.repository import Gio, GLib
+
+    from . import config
+
+    try:
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        reply = bus.call_sync(
+            "org.freedesktop.DBus", "/org/freedesktop/DBus",
+            "org.freedesktop.DBus", "GetConnectionUnixProcessID",
+            GLib.Variant("(s)", (config.APP_ID,)),
+            GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, 2000, None,
+        )
+        pid = reply.unpack()[0]
+    except GLib.Error as exc:
+        # NameHasNoOwner is the ordinary case: no daemon is running.
+        return None, None, exc.message
+
+    proc = Path("/proc") / str(pid)
+    try:
+        environ = dict(
+            kv.split("=", 1)
+            for kv in (proc / "environ").read_text().split("\0") if "=" in kv
+        )
+        argv = (proc / "cmdline").read_bytes().decode().split("\0")
+        cwd = os.readlink(proc / "cwd")
+    except OSError as exc:
+        return pid, None, str(exc)
+    return pid, _import_root(environ, cwd, argv), ""
+
+
+def _check_daemon():
+    """Say which installation is answering, since two of them can be present.
+
+    A packaged sponux and a checkout share io.github.sponux, so whichever
+    daemon reached the bus first serves every keypress — silently, which is
+    the wrong way round when the reason you are running --check is that a
+    change of yours seems to have done nothing.
+    """
+    import os
+    from pathlib import Path
+
+    from . import config
+
+    here = str(Path(__file__).resolve().parent.parent)
+    print(f"\ndaemon — this tree is {here} ({_version_at(here) or 'version?'})")
+
+    pid, root, why = _daemon_facts()
+    if pid is None:
+        print("  ok      none running; the next press starts one from here")
+        return
+    if root is None:
+        print(f"  note    pid {pid} holds {config.APP_ID}, but where it imports "
+              f"from could not be read ({why})")
+        return
+
+    version = _version_at(root) or "version?"
+    if os.path.realpath(root) == os.path.realpath(here):
+        print(f"  ok      pid {pid} from {root} ({version}) — this one, so a "
+              "keypress runs what you are looking at")
+        return
+    print(f"  WARN    pid {pid} from {root} ({version}) answers every keypress, "
+          "not this tree")
+    print("          Both share one name on the bus and the first to claim it "
+          "wins. Stop it")
+    print(f"          with Ctrl+Q in the launcher, or `kill {pid}`, then start "
+          "the one you want.")
 
 
 def _check_log():

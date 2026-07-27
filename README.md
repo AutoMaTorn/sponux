@@ -149,6 +149,7 @@ python3 tests/test_config.py      # [open] rules, the config writer, dotfiles
 python3 tests/test_usage.py       # the frecency curve and its effect on results
 python3 tests/test_query.py       # kind prefixes and typed-path completion
 python3 tests/test_report.py      # the runtime log: bounds, and never raising
+python3 tests/test_daemon.py      # which installation --check says is answering
 python3 tests/test_docs.py        # the two guides: parity, links, documented flags
 python3 tools/bench.py installed  # open latency of the installed sponux
 python3 tools/visual.py /tmp/shots  # screenshot the real window

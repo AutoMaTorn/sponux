@@ -71,6 +71,10 @@ Check
 that every configured command is on
 .BR PATH ,
 that the index roots exist, and that each include lies inside a root.
+Names the daemon that is actually answering \(em its pid, the directory it
+imports from and that copy's version \(em because a packaged sponux and a
+source checkout share one name on the session bus, and only the first to claim
+it is ever consulted.
 Ends with the tail of
 .IR ~/.local/state/sponux/sponux.log ,
 which is where anything that went wrong while running was recorded.
