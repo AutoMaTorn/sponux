@@ -6,7 +6,10 @@ Comment=Search applications, files and do arithmetic
 # The wrapper, not "python3 -m sponux": it pokes an already-running daemon over
 # D-Bus and only falls back to starting Python when there is nothing to poke.
 Exec=sponux
-Icon=system-search
+# Shipped in packaging/icons/, installed into hicolor at the standard
+# sizes; regenerate the sizes with tools/mkicons.py after changing the
+# master artwork.
+Icon=io.github.sponux
 Terminal=false
 Categories=Utility;
 Keywords=launcher;search;run;spotlight;

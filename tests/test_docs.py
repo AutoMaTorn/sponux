@@ -127,14 +127,14 @@ check("there are some to embed", len(images["en"]) >= 2, True)
 
 # Each builder names the files it ships, so each is a place a guide could creep
 # back into. "docs/" would be a path to one; "user-guide" would be its name.
-for builder in ("mkdeb.py", "mktarball.py", "mkwheel.py"):
+for builder in ("mkdeb.py", "mkicons.py", "mktarball.py", "mkwheel.py"):
     text = (ROOT / "tools" / builder).read_text()
     named = [n for n in ("user-guide", "docs/") if n in text]
     check(f"{builder} does not ship the guides", named, [])
 
 check("and those are all the builders there are",
       sorted(p.name for p in (ROOT / "tools").glob("mk*.py")),
-      ["mkdeb.py", "mktarball.py", "mkwheel.py"])
+      ["mkdeb.py", "mkicons.py", "mktarball.py", "mkwheel.py"])
 
 # ---- the directories say what they hold ----------------------------------
 #

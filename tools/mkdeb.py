@@ -37,6 +37,11 @@ FILES = [
     ("bin/sponux", "usr/bin/sponux", 0o755),
     ("packaging/io.github.sponux.desktop",
      "usr/share/applications/io.github.sponux.desktop", 0o644),
+    # Icons go in hicolor's standard buckets: a directory named after any
+    # other size is not in hicolor's index.theme and is never looked in.
+    *[(f"packaging/icons/hicolor/{s}x{s}/apps/io.github.sponux.png",
+       f"usr/share/icons/hicolor/{s}x{s}/apps/io.github.sponux.png", 0o644)
+      for s in (48, 64, 128)],
     ("README.md", "usr/share/doc/sponux/README.md", 0o644),
     # In a .deb the licence is `copyright`, in the format policy defines.
     ("packaging/copyright", "usr/share/doc/sponux/copyright", 0o644),

@@ -176,9 +176,11 @@ docs/               the user guide, English and Russian
 packaging/
   io.github.sponux.desktop   the desktop entry
   sponux.1                   the manual page
+  icons/                     the app icon: master, plus hicolor sizes
   changelog, copyright       Debian packaging data
 tools/
   mkdeb.py, mktarball.py, mkwheel.py, metadata.py   the builds
+  mkicons.py                          icon sizes, regenerated from the master
   bench.py, visual.py                 latency, and screenshotting the real window
 tests/
   test_*.py                           the checks; each one runs standalone
