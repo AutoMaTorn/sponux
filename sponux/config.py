@@ -23,6 +23,11 @@ USAGE_DB = STATE_DIR / "usage.db"
 # generation, so the two files together are bounded.
 LOG_FILE = STATE_DIR / "sponux.log"
 MAX_LOG_BYTES = 64 * 1024
+# How many opens carry the "bind a key" hint before the window goes back to
+# teaching the prefixes. Three rather than one: the first open is often spent
+# looking at the window itself, and this costs nothing to get wrong twice.
+FIRST_RUN_FILE = STATE_DIR / "first-run"
+FIRST_RUN_HINTS = 3
 # Written and removed by `sponux --autostart`; nothing else touches it, and
 # it is not created by installing sponux.
 AUTOSTART_FILE = _xdg("XDG_CONFIG_HOME", ".config") / "autostart" / "sponux.desktop"

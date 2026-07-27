@@ -115,6 +115,55 @@ def record(key: str, now: float = None):
         report.problem(f"cannot record use of {key}: {exc}")
 
 
+def opens() -> int:
+    """How many times the launcher has been opened, as far as the file knows."""
+    try:
+        return int(config.FIRST_RUN_FILE.read_text().strip() or 0)
+    except (OSError, ValueError):
+        return 0
+
+
+def looks_fresh() -> bool:
+    """True while nothing suggests sponux has been used here before.
+
+    Two signals, because either alone lies: the counter file is missing on an
+    install older than the counter, and the count is low on someone who opened
+    the launcher twice a year ago.
+    """
+    return opens() <= config.FIRST_RUN_HINTS and not _table()
+
+
+def record_open() -> int:
+    """Count one open of the launcher; return the count, capped.
+
+    The number stops rising one past the hint — the point is answering "is
+    this a fresh install?", not keeping a lifetime tally.
+
+    Installing sponux and not binding a key gives a program that looks broken:
+    the desktop entry opens the window, and nothing in the window says that a
+    hotkey is the point. The first few opens say so instead of teaching the
+    prefixes, which needs a count that outlives the daemon.
+
+    Deliberately not a row in the usage table: that table is keyed by result
+    and gets pruned, so a phantom key in it would be both rankable and
+    perishable. This is one small file with a number in it.
+    """
+    total = opens() + 1
+    if total == 1 and _table():
+        # No counter file, but things have been opened: this is an install that
+        # predates the counter, not a first run. Do not lecture it.
+        total = config.FIRST_RUN_HINTS + 1
+    if total > config.FIRST_RUN_HINTS + 1:
+        # Past the hint for good; stop writing on every open forever.
+        return total
+    try:
+        config.STATE_DIR.mkdir(parents=True, exist_ok=True)
+        config.FIRST_RUN_FILE.write_text(f"{total}\n")
+    except OSError as exc:
+        report.problem(f"cannot record the first-run hint: {exc}")
+    return total
+
+
 def _prune(con):
     """Drop the least recently used entries once the table gets long."""
     keep = config.MAX_USAGE_ENTRIES

@@ -37,6 +37,10 @@ _HINTS_OPEN_WITH = "↩ open with it   type to filter   Esc back"
 # prefixes below are the only part of the interface that has to be known in
 # advance, so this is where they are taught.
 _HINTS_EMPTY = "f: files   a: apps   = calculate   / or ~/ a path"
+# Shown instead, for the first few opens. Installing sponux and not binding a
+# key gives a launcher that looks broken — the desktop entry opens the window
+# and nothing in it says a hotkey is the whole point. See usage.record_open().
+_HINTS_FIRST_RUN = "bind a key to sponux — that is how it is meant to open"
 
 # A leading prefix narrows the search to one kind of result. Short, because
 # they are typed ahead of every query that uses them.
@@ -82,6 +86,9 @@ class SponuxWindow(Gtk.ApplicationWindow):
         self.set_default_size(self.settings.width, -1)
         self.add_css_class("sponux")
         self._results = []
+        # Set for real by reset_and_present(); the window is built before the
+        # first open, and _update_hints() runs while it is being populated.
+        self._first_run = False
 
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         card.add_css_class("sponux-card")
@@ -263,7 +270,8 @@ class SponuxWindow(Gtk.ApplicationWindow):
         # Nothing typed yet: teach the prefixes instead of the modifiers, since
         # there is nothing selected for a modifier to act on.
         if not self.entry.get_text():
-            self.hints.set_text(_HINTS_EMPTY)
+            self.hints.set_text(_HINTS_FIRST_RUN if self._first_run
+                                else _HINTS_EMPTY)
             self.hints.set_visible(True)
             return
         result = self._selected()
@@ -544,6 +552,7 @@ class SponuxWindow(Gtk.ApplicationWindow):
         # settings() only re-reads when the file's mtime changed.
         self.settings = userconfig.window_settings()
         self.set_default_size(self.settings.width, -1)
+        self._first_run = usage.record_open() <= config.FIRST_RUN_HINTS
         self._reset_mode()
         self.entry.set_text("")
         self._populate([])

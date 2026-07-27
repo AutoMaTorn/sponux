@@ -102,9 +102,43 @@ def _check():
     hotkey or at login and had no terminal to complain to.
     """
     rc = _check_config()
-    _check_daemon()
+    pid = _check_daemon()
+    _check_startup(pid)
     _check_log()
     return rc
+
+
+def _check_startup(daemon_pid):
+    """How sponux gets started — the usual reason a fresh install looks broken.
+
+    Installed and never bound to a key, sponux is a program that opens when
+    you pick it out of a menu and does nothing else, which is not what it is
+    for. The window says so on its first few opens; this says it here, where
+    someone who has gone looking for an explanation will be.
+    """
+    from . import config, usage
+
+    print("\nstartup")
+    if config.AUTOSTART_FILE.exists():
+        print(f"  ok      starts at login: {config.AUTOSTART_FILE}")
+    elif daemon_pid is not None:
+        print(f"  ok      a daemon is up (pid {daemon_pid}), so something "
+              "starts it")
+        print(f"  note    not {config.AUTOSTART_FILE} though — i3's "
+              "`exec_always`, or by hand")
+    else:
+        print("  note    nothing starts the daemon at login: "
+              f"{config.AUTOSTART_FILE} does not exist")
+        print("          `sponux --autostart on` moves the ~420 ms cold start "
+              "off your first keypress")
+
+    if usage.looks_fresh():
+        print(f"  note    opened {usage.opens()} time(s) and nothing opened "
+              "through it yet.")
+        print("          sponux is meant to be on a key binding, and nothing "
+              "here can read your")
+        print("          window manager's config — bind `sponux` to a key "
+              "yourself.")
 
 
 def _import_root(environ: dict, cwd, argv):
@@ -212,23 +246,24 @@ def _check_daemon():
     pid, root, why = _daemon_facts()
     if pid is None:
         print("  ok      none running; the next press starts one from here")
-        return
+        return None
     if root is None:
         print(f"  note    pid {pid} holds {config.APP_ID}, but where it imports "
               f"from could not be read ({why})")
-        return
+        return pid
 
     version = _version_at(root) or "version?"
     if os.path.realpath(root) == os.path.realpath(here):
         print(f"  ok      pid {pid} from {root} ({version}) — this one, so a "
               "keypress runs what you are looking at")
-        return
+        return pid
     print(f"  WARN    pid {pid} from {root} ({version}) answers every keypress, "
           "not this tree")
     print("          Both share one name on the bus and the first to claim it "
           "wins. Stop it")
     print(f"          with Ctrl+Q in the launcher, or `kill {pid}`, then start "
           "the one you want.")
+    return pid
 
 
 def _check_log():

@@ -1,4 +1,4 @@
-"""Checks for the daemon section of --check: which installation answers.
+"""Checks for the two --check sections about how sponux is actually running.
 
 A packaged sponux and a source checkout share `io.github.sponux`, so the
 daemon that reached the session bus first serves every keypress and the other
@@ -10,6 +10,10 @@ The awkward half is working out where a *running* process imports its package
 from, so `_import_root()` is pure and gets the fake /proc facts here. The rest
 is what the four possible answers look like: a wrong or vague one costs exactly
 the debugging session this is meant to save.
+
+The `startup` section is here for the same reason: a fresh install that was
+never bound to a key looks broken, and the advice for it must not be shown to
+someone who has been using sponux for months.
 
 Run: python3 tests/test_daemon.py
 """
@@ -29,7 +33,7 @@ os.environ["XDG_CONFIG_HOME"] = f"{_TMP}/config"
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-from sponux import __main__ as cli  # noqa: E402
+from sponux import __main__ as cli, config, usage  # noqa: E402
 
 _failures = []
 
@@ -126,6 +130,42 @@ text = section((4242, None, "Permission denied"))
 check("an unreadable /proc is a note, not a guess",
       "note" in text and "Permission denied" in text, True)
 check("...and still names the pid", "4242" in text, True)
+
+# ---- the startup section: how it gets started, and whether to say so ------
+
+
+def startup(pid):
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        cli._check_startup(pid)
+    return out.getvalue()
+
+
+config.FIRST_RUN_FILE.unlink(missing_ok=True)
+usage.forget_all()
+usage._cache = None
+
+text = startup(None)
+check("no daemon and no autostart entry says nothing starts it",
+      "nothing starts the daemon at login" in text, True)
+check("...and points at --autostart", "--autostart on" in text, True)
+check("an untouched install is told what a launcher is for",
+      "on a key binding" in text, True)
+
+check("a running daemon is enough for the startup line",
+      "a daemon is up (pid 4242)" in startup(4242), True)
+
+config.AUTOSTART_FILE.parent.mkdir(parents=True, exist_ok=True)
+config.AUTOSTART_FILE.write_text("[Desktop Entry]\n")
+check("an autostart entry is reported as ok",
+      "starts at login" in startup(None), True)
+config.AUTOSTART_FILE.unlink()
+
+# Somebody who has opened things through sponux does not need to be told what
+# it is: the advice would be both wrong and patronising.
+usage.record(usage.key_for_app("kitty.desktop"))
+check("an install with history is not lectured",
+      "on a key binding" in startup(4242), False)
 
 shutil.rmtree(_TMP, ignore_errors=True)
 

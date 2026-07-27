@@ -140,6 +140,36 @@ after = [r.subtitle for r in files_provider.search("notes")]
 check("the one that was opened is now first", after[0], winner)
 check("the other is still offered", after[1], loser)
 
+# ---- the first-run counter, which shares this state directory -------------
+#
+# It answers one question — does this install look untouched? — and the two
+# ways it can lie are an install older than the counter (no file, plenty of
+# history) and someone who opened the launcher twice a year ago.
+
+config.FIRST_RUN_FILE.unlink(missing_ok=True)
+usage.forget_all()
+
+check("an untouched install has no opens", usage.opens(), 0)
+check("...and looks fresh", usage.looks_fresh(), True)
+
+counted = [usage.record_open() for _ in range(config.FIRST_RUN_HINTS + 3)]
+check("opens are counted until one past the hint, then stop",
+      counted, [1, 2, 3, 4, 5, 5])
+check("the hint is shown for exactly the first three",
+      [n <= config.FIRST_RUN_HINTS for n in counted],
+      [True, True, True, False, False, False])
+check("...and the file holds the capped count", usage.opens(),
+      config.FIRST_RUN_HINTS + 1)
+check("a counted-out install no longer looks fresh", usage.looks_fresh(), False)
+
+# The upgrade case: no counter file, but the usage table says otherwise.
+config.FIRST_RUN_FILE.unlink(missing_ok=True)
+usage.record(usage.key_for_app("kitty.desktop"), now=NOW)
+check("history alone is enough to stop looking fresh",
+      usage.looks_fresh(), False)
+check("...and the first open after an upgrade skips the hint",
+      usage.record_open() <= config.FIRST_RUN_HINTS, False)
+
 shutil.rmtree(_TMP, ignore_errors=True)
 
 print()

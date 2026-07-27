@@ -74,6 +74,12 @@ sponux
 
 The window appears at the top of the screen. Type to search; `Esc` closes it.
 
+The first three times it opens, the hint line under the search box says to bind
+a key to `sponux`, because that is what the program is for: picking it out of an
+application menu works, but it is not how anyone uses a launcher. After that the
+line goes back to teaching the search prefixes. `sponux --check` says the same
+thing in its `startup` section for as long as the install looks untouched.
+
 Run `sponux` again and the window toggles instead of starting a second copy.
 That is the whole design: the first call starts a small resident daemon, and
 every later call just tells it to show itself. Showing the window takes about
@@ -538,6 +544,7 @@ compositor. Everything else works.
 | `~/.cache/sponux/index.db` | the filename index; safe to delete, it rebuilds |
 | `~/.local/state/sponux/usage.db` | what you have opened, for ranking |
 | `~/.local/state/sponux/sponux.log` | what went wrong while running; rotates at 64 KiB, safe to delete |
+| `~/.local/state/sponux/first-run` | how many times the window has opened, up to four — only so the first-run hint stops |
 | `~/.local/state/sponux/*.bak` | the last version of a config file sponux replaced |
 | `~/.config/autostart/sponux.desktop` | only if you asked for it with `--autostart on` |
 

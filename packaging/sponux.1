@@ -75,6 +75,9 @@ Names the daemon that is actually answering \(em its pid, the directory it
 imports from and that copy's version \(em because a packaged sponux and a
 source checkout share one name on the session bus, and only the first to claim
 it is ever consulted.
+Says how sponux gets started \(em an autostart entry, a running daemon, or
+neither \(em and, while the install still looks untouched, that it is meant to
+be bound to a key.
 Ends with the tail of
 .IR ~/.local/state/sponux/sponux.log ,
 which is where anything that went wrong while running was recorded.
@@ -185,6 +188,11 @@ written again.
 Safe to delete.
 Read the tail of it with
 .BR "sponux \-\-check" .
+.TP
+.I ~/.local/state/sponux/first-run
+How many times the window has been opened, counted only as far as it takes to
+stop showing the first-run hint.
+Safe to delete; doing so brings the hint back.
 .TP
 .I ~/.local/state/sponux/*.bak
 The last version of a config file sponux replaced.
