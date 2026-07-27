@@ -6,7 +6,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 from gi.repository import Gtk, Gdk, Gio, GLib  # noqa: E402
 
-from . import config, indexer, placement, usage, userconfig  # noqa: E402
+from . import config, indexer, placement, report, usage, userconfig  # noqa: E402
 from .providers import apps as apps_provider  # noqa: E402
 from .providers import base  # noqa: E402
 from .providers import calc as calc_provider  # noqa: E402
@@ -383,7 +383,7 @@ class SponuxWindow(Gtk.ApplicationWindow):
         command = files_provider.command_for(app)
         written = userconfig.remember_opener(result.path, result.is_dir, command)
         if written:
-            print(f"sponux: wrote {written} to {userconfig.CONFIG_FILE}")
+            report.note(f"wrote {written} to {userconfig.CONFIG_FILE}")
 
     # ---- activation & keys -------------------------------------------
 
@@ -632,11 +632,13 @@ class SponuxApp(Gtk.Application):
     def _add_css(self, display, path, priority):
         provider = Gtk.CssProvider()
         # A stylesheet the user is editing will sometimes be mid-edit and
-        # invalid; say so on stderr instead of failing silently.
+        # invalid; say so instead of failing silently. It goes to the log and
+        # no further: this fires on every save while a sheet is being worked
+        # on, which is no reason to put a notification on screen each time.
         provider.connect(
             "parsing-error",
-            lambda _p, section, error: print(
-                f"sponux: {path}:{section.get_start_location().lines + 1}: "
+            lambda _p, section, error: report.problem(
+                f"{path}:{section.get_start_location().lines + 1}: "
                 f"{error.message}"
             ),
         )
@@ -653,6 +655,9 @@ def main(argv=None, daemon=False):
     GLib.set_application_name("sponux")
     if daemon and _daemon_running():
         return 0
+    # From here on there is a window and, more to the point, usually no
+    # terminal behind it: everything reported goes to the log as well.
+    report.start_logging()
     app = SponuxApp(start_hidden=daemon)
     return app.run(argv if argv is not None else sys.argv)
 

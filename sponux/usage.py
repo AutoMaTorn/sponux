@@ -23,7 +23,7 @@ import math
 import sqlite3
 import time
 
-from . import config, userconfig
+from . import config, report, userconfig
 
 _cache = None      # key -> (hits, last_used); None until first loaded
 _con = None
@@ -87,8 +87,9 @@ def _table():
             rows = _connect().execute("SELECT key, hits, last FROM usage")
             _cache = {key: (hits, last) for key, hits, last in rows}
         except sqlite3.Error as exc:
-            # A launcher that cannot rank is fine; one that will not open is not.
-            print(f"sponux: cannot read {config.USAGE_DB}: {exc}")
+            # A launcher that cannot rank is fine; one that will not open is
+            # not. Logged, but nothing to interrupt anyone about.
+            report.problem(f"cannot read {config.USAGE_DB}: {exc}")
     return _cache
 
 
@@ -111,7 +112,7 @@ def record(key: str, now: float = None):
         if len(table) > config.MAX_USAGE_ENTRIES:
             _prune(con)
     except sqlite3.Error as exc:
-        print(f"sponux: cannot record use of {key}: {exc}")
+        report.problem(f"cannot record use of {key}: {exc}")
 
 
 def _prune(con):

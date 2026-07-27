@@ -152,6 +152,7 @@ python3 tests/test_index.py       # правила индекса + живые �
 python3 tests/test_config.py      # правила [open], запись конфига, dotfiles
 python3 tests/test_usage.py       # кривая frecency и её влияние на результаты
 python3 tests/test_query.py       # префиксы вида и дополнение набранного пути
+python3 tests/test_report.py      # журнал работы: границы и запрет на собственные сбои
 python3 tests/test_docs.py        # два руководства: паритет, ссылки, задокументированные флаги
 python3 tools/bench.py installed  # задержка открытия установленного sponux
 python3 tools/visual.py /tmp/shots  # снимок настоящего окна
@@ -166,6 +167,7 @@ sponux/
   indexer.py        SQLite-индекс имён: правила, inotify, периодическое перестроение
   usage.py          что открывалось и какую прибавку это даёт при ранжировании
   userconfig.py     config.toml и style.css, и запись правил обратно
+  report.py         куда уходят ошибки работы, когда терминала нет
   config.py         пути и значения по умолчанию
   style.css         тёмный вид, целиком на переменных CSS
   providers/

@@ -95,6 +95,35 @@ def _which(argv):
 
 
 def _check():
+    """Report what is wrong with the config, and what went wrong while running.
+
+    The static half is what config.toml says; the runtime half is the log,
+    which is the only place a failure lands when sponux was started from a
+    hotkey or at login and had no terminal to complain to.
+    """
+    rc = _check_config()
+    _check_log()
+    return rc
+
+
+def _check_log():
+    """Show the tail of the runtime log — what --check cannot find by itself."""
+    from . import config, report
+
+    lines = report.log_lines()
+    print(f"\nruntime log — {config.LOG_FILE}")
+    if not lines:
+        print("  ok      nothing reported while running")
+        return
+    shown = lines[-5:]
+    tail = f"; the last {len(shown)}" if len(lines) > len(shown) else ""
+    print(f"  note    {len(lines)} line(s){tail}:")
+    for line in shown:
+        print(f"          {line}")
+    print("  note    these have already happened; delete the file to reset it")
+
+
+def _check_config():
     """Report everything wrong with the config that can be found statically."""
     import os
     import shlex

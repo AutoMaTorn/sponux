@@ -28,7 +28,7 @@ import sqlite3
 import threading
 import time
 
-from . import config, userconfig
+from . import config, report, userconfig
 
 _lock = threading.Lock()      # serialises writers within this process
 _events = queue.Queue()       # (kind, path, other_path), main thread -> worker
@@ -412,8 +412,8 @@ def _watch(path: str, max_watches: int):
     if len(_monitors) >= max_watches:
         if not _watch_limit_hit:
             _watch_limit_hit = True
-            print(f"sponux: watching only the first {max_watches} directories; "
-                  f"the rest stay on the periodic rebuild")
+            report.note(f"watching only the first {max_watches} directories; "
+                        f"the rest stay on the periodic rebuild")
         return
     Gio, _ = _gio()
     if Gio is None:
@@ -580,7 +580,9 @@ def start_background(reindex_interval=None):
                 if rules.watch:
                     sync_watches(dirs, rules)
             except Exception as exc:
-                print(f"sponux: indexing failed: {exc}")
+                # No notification: nothing the user did is waiting on this,
+                # and a rebuild that fails once a minute would notify as often.
+                report.problem(f"indexing failed: {exc}")
 
             # Until the next full rebuild is due, keep the index current from
             # the watches. A rebuild also happens early if the rules changed.
@@ -598,7 +600,7 @@ def start_background(reindex_interval=None):
                 try:
                     _apply_events(_drain(event), rules)
                 except Exception as exc:
-                    print(f"sponux: index update failed: {exc}")
+                    report.problem(f"index update failed: {exc}")
 
     t = threading.Thread(target=loop, name="sponux-indexer", daemon=True)
     t.start()

@@ -18,6 +18,11 @@ CONFIG_DIR = _xdg("XDG_CONFIG_HOME", ".config") / "sponux"
 STATE_DIR = _xdg("XDG_STATE_HOME", ".local/state") / "sponux"
 INDEX_DB = CACHE_DIR / "index.db"
 USAGE_DB = STATE_DIR / "usage.db"
+# Where runtime problems land when there is no terminal to print them to; see
+# report.py. A tail rather than an archive: at this size it rotates one
+# generation, so the two files together are bounded.
+LOG_FILE = STATE_DIR / "sponux.log"
+MAX_LOG_BYTES = 64 * 1024
 # Written and removed by `sponux --autostart`; nothing else touches it, and
 # it is not created by installing sponux.
 AUTOSTART_FILE = _xdg("XDG_CONFIG_HOME", ".config") / "autostart" / "sponux.desktop"

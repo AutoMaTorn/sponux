@@ -71,6 +71,9 @@ Check
 that every configured command is on
 .BR PATH ,
 that the index roots exist, and that each include lies inside a root.
+Ends with the tail of
+.IR ~/.local/state/sponux/sponux.log ,
+which is where anything that went wrong while running was recorded.
 .SH KEYS
 .TS
 tab(@);
@@ -166,6 +169,18 @@ The filename index. Safe to delete; it rebuilds.
 .TP
 .I ~/.local/state/sponux/usage.db
 What you have opened, and when, for ranking.
+.TP
+.I ~/.local/state/sponux/sponux.log
+What went wrong while running \(em a command that would not start, a
+stylesheet that would not parse, an index rebuild that failed \(em because a
+launcher started from a hotkey has no terminal to print it to.
+Rotates to
+.I sponux.log.1
+at 64 KiB, and a message repeating within a minute is counted rather than
+written again.
+Safe to delete.
+Read the tail of it with
+.BR "sponux \-\-check" .
 .TP
 .I ~/.local/state/sponux/*.bak
 The last version of a config file sponux replaced.

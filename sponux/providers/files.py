@@ -6,7 +6,7 @@ import shlex
 from gi.repository import Gio, GLib
 
 from .base import Result, fuzzy_score
-from .. import config, indexer, usage, userconfig
+from .. import config, indexer, report, usage, userconfig
 
 # Rows pulled from SQLite per requested result. LIKE can only narrow the
 # candidates; the ranking below decides which of them the user actually sees,
@@ -53,7 +53,9 @@ def _spawn(argv) -> bool:
         Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE)
         return True
     except GLib.Error as exc:
-        print(f"sponux: cannot run {argv[0]!r}: {exc.message}")
+        # Someone pressed Enter and nothing opened: exactly the case a
+        # notification is for.
+        report.problem(f"cannot run {argv[0]!r}: {exc.message}", notify=True)
         return False
 
 
@@ -124,8 +126,8 @@ def open_with(app, path: str) -> bool:
     try:
         return app.launch_uris([GLib.filename_to_uri(path, None)], None)
     except GLib.Error as exc:
-        print(f"sponux: cannot open {path} with "
-              f"{app.get_display_name()}: {exc.message}")
+        report.problem(f"cannot open {path} with "
+                       f"{app.get_display_name()}: {exc.message}", notify=True)
         return False
 
 

@@ -465,6 +465,20 @@ checks the index roots and includes. `--which` prints a file's content type, the
 rule that matched, the exact command that would run, and says so when the
 program is missing.
 
+**Where the errors went.** Started from a hotkey or at login, sponux has no
+terminal to print to, so everything it reports while running is also appended
+to `~/.local/state/sponux/sponux.log`, and the tail of that file is the last
+thing `sponux --check` prints. That is the place to look when something failed
+once and left no trace on screen. The file is bounded — it rotates to
+`sponux.log.1` at 64 KiB, and a message repeating within a minute is counted
+rather than written again — and you can delete either file at any time.
+
+For the handful of failures where you pressed a key and nothing happened — a
+configured opener that would not start, a `config.toml` that is being ignored
+whole — sponux also raises a desktop notification, if your session shows them.
+Background trouble, such as a stylesheet saved mid-edit or an index update that
+failed, only goes to the log.
+
 **The hotkey does nothing.** Run `sponux` in a terminal and read the error.
 Note that the window is intentionally invisible to window-manager tooling — it
 will not show up in `wmctrl -l` or `_NET_CLIENT_LIST`. To confirm it exists:
@@ -500,8 +514,9 @@ note about `text/*` above.
 fontconfig calls it; check with `fc-match`. "JetBrains Mono" and "JetBrainsMono
 Nerd Font" are different names, and only the installed one resolves.
 
-**My style.css seems ignored.** A CSS parse error is reported on stderr with a
-file and line number — start the daemon in a terminal to see it.
+**My style.css seems ignored.** A CSS parse error is reported with a file and
+line number — in `sponux --check`, at the end, or on stderr if you started the
+daemon in a terminal.
 
 **Edits to config.toml do nothing.** If the file cannot be parsed as TOML, the
 whole file is ignored rather than half-applied. `sponux --check` says so, with
@@ -520,6 +535,7 @@ compositor. Everything else works.
 | `~/.config/sponux/` | your two config files — only ever written by `--write-config` or the "remember" switch |
 | `~/.cache/sponux/index.db` | the filename index; safe to delete, it rebuilds |
 | `~/.local/state/sponux/usage.db` | what you have opened, for ranking |
+| `~/.local/state/sponux/sponux.log` | what went wrong while running; rotates at 64 KiB, safe to delete |
 | `~/.local/state/sponux/*.bak` | the last version of a config file sponux replaced |
 | `~/.config/autostart/sponux.desktop` | only if you asked for it with `--autostart on` |
 

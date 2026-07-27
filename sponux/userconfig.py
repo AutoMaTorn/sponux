@@ -19,7 +19,7 @@ import shlex
 import tomllib
 from dataclasses import dataclass
 
-from . import config
+from . import config, report
 
 CONFIG_FILE = config.CONFIG_DIR / "config.toml"
 STYLE_FILE = config.CONFIG_DIR / "style.css"
@@ -65,8 +65,10 @@ def settings() -> dict:
         with open(CONFIG_FILE, "rb") as fh:
             _cache = tomllib.load(fh)
     except (OSError, tomllib.TOMLDecodeError) as exc:
-        # A typo in the config must not take the launcher down with it.
-        print(f"sponux: ignoring {CONFIG_FILE}: {exc}")
+        # A typo in the config must not take the launcher down with it — but
+        # every setting in the file is gone until it parses, which is worth
+        # interrupting someone for.
+        report.problem(f"ignoring {CONFIG_FILE}: {exc}", notify=True)
         _cache = {}
     return _cache
 
@@ -141,12 +143,14 @@ def command_argv(template, path: str):
     if not isinstance(template, str):
         # A number or a table here is a typo, not a command; saying so beats
         # spawning something nonsensical.
-        print(f"sponux: {CONFIG_FILE}: {template!r} is not a command string")
+        report.problem(
+            f"{CONFIG_FILE}: {template!r} is not a command string", notify=True)
         return None
     try:
         argv = shlex.split(template)
     except ValueError as exc:
-        print(f"sponux: bad command {template!r} in {CONFIG_FILE}: {exc}")
+        report.problem(f"bad command {template!r} in {CONFIG_FILE}: {exc}",
+                       notify=True)
         return None
     if not argv:
         return None
@@ -257,7 +261,9 @@ def _keys() -> dict:
 
 
 def _complain(message: str):
-    print(f"sponux: {CONFIG_FILE}: {message}")
+    # No notification: these all fall back to a working default, and --check
+    # lists them whenever the user goes looking.
+    report.problem(f"{CONFIG_FILE}: {message}")
 
 
 def opener_rules():
@@ -350,7 +356,7 @@ def remember_opener(path: str, is_dir: bool, command: str):
         updated = _with_rule(original, table, key, line)
         tomllib.loads(updated)  # never write a file we cannot read back
     except (OSError, tomllib.TOMLDecodeError) as exc:
-        print(f"sponux: cannot update {CONFIG_FILE}: {exc}")
+        report.problem(f"cannot update {CONFIG_FILE}: {exc}", notify=True)
         return None
 
     try:
@@ -360,7 +366,9 @@ def remember_opener(path: str, is_dir: bool, command: str):
             BACKUP_FILE.write_text(original)
         _write_through(CONFIG_FILE, updated)
     except OSError as exc:
-        print(f"sponux: cannot write {CONFIG_FILE}: {exc}")
+        # The user asked to remember an opener and it did not stick; if they
+        # are not told, the next open is a mystery.
+        report.problem(f"cannot write {CONFIG_FILE}: {exc}", notify=True)
         return None
     return f"[{table}] {line}"
 
@@ -620,7 +628,8 @@ def write_starter_files(force: bool = False):
                 backup.write_text(path.read_text())
                 replaced.append((path, backup))
             except OSError as exc:
-                print(f"sponux: not overwriting {path}: cannot back it up ({exc})")
+                report.problem(
+                    f"not overwriting {path}: cannot back it up ({exc})")
                 skipped.append(path)
                 continue
         # Written through the file rather than onto it: if this is a symlink

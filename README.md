@@ -148,6 +148,7 @@ python3 tests/test_index.py       # index rules + live inotify updates
 python3 tests/test_config.py      # [open] rules, the config writer, dotfiles
 python3 tests/test_usage.py       # the frecency curve and its effect on results
 python3 tests/test_query.py       # kind prefixes and typed-path completion
+python3 tests/test_report.py      # the runtime log: bounds, and never raising
 python3 tests/test_docs.py        # the two guides: parity, links, documented flags
 python3 tools/bench.py installed  # open latency of the installed sponux
 python3 tools/visual.py /tmp/shots  # screenshot the real window
@@ -162,6 +163,7 @@ sponux/
   indexer.py        SQLite filename index: rules, inotify, periodic rebuild
   usage.py          what has been opened, and the ranking bonus for it
   userconfig.py     config.toml and style.css, and writing rules back
+  report.py         where runtime problems go when there is no terminal
   config.py         paths and defaults
   style.css         the dark look, driven by CSS variables
   providers/
