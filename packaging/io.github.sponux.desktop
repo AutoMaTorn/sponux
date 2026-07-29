@@ -7,8 +7,8 @@ Comment=Search applications, files and do arithmetic
 # D-Bus and only falls back to starting Python when there is nothing to poke.
 Exec=sponux
 # Shipped in packaging/icons/, installed into hicolor at the standard
-# sizes; regenerate the sizes with tools/mkicons.py after changing the
-# master artwork.
+# sizes and as the SVG master in scalable/; regenerate them with
+# tools/mkicons.py after changing the master artwork.
 Icon=io.github.sponux
 Terminal=false
 Categories=Utility;

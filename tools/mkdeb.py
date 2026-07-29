@@ -41,7 +41,11 @@ FILES = [
     # other size is not in hicolor's index.theme and is never looked in.
     *[(f"packaging/icons/hicolor/{s}x{s}/apps/io.github.sponux.png",
        f"usr/share/icons/hicolor/{s}x{s}/apps/io.github.sponux.png", 0o644)
-      for s in (48, 64, 128)],
+      for s in (48, 64, 128, 256)],
+    # The vector master as well, for the lookups that can rasterise it and so
+    # want no bucket at all — a HiDPI panel asking for 96px, say.
+    ("packaging/icons/hicolor/scalable/apps/io.github.sponux.svg",
+     "usr/share/icons/hicolor/scalable/apps/io.github.sponux.svg", 0o644),
     ("README.md", "usr/share/doc/sponux/README.md", 0o644),
     # In a .deb the licence is `copyright`, in the format policy defines.
     ("packaging/copyright", "usr/share/doc/sponux/copyright", 0o644),

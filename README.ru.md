@@ -181,11 +181,11 @@ docs/               руководство пользователя, англи�
 packaging/
   io.github.sponux.desktop   элемент рабочего стола
   sponux.1                   страница man
-  icons/                     иконка приложения: мастер и размеры hicolor
+  icons/                     иконка приложения: мастер-SVG и размеры hicolor
   changelog, copyright       данные для сборки Debian-пакета
 tools/
   mkdeb.py, mktarball.py, mkwheel.py, metadata.py   сборки
-  mkicons.py                          размеры иконки, из мастер-файла
+  mkicons.py                          размеры иконки, из мастер-SVG
   bench.py, visual.py                 задержки и снимки настоящего окна
 tests/
   test_*.py                           проверки; каждая запускается отдельно

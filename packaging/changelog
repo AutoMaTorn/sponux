@@ -1,3 +1,11 @@
+sponux (0.2.1-1) unstable; urgency=medium
+
+  * New application icon, and it ships as a vector master besides the fixed
+    hicolor sizes: a 256px bucket and scalable/ are installed as well, so a
+    HiDPI panel no longer scales the 128px one up.
+
+ -- automatorn <automatorn@gmail.com>  Wed, 29 Jul 2026 18:00:00 +0300
+
 sponux (0.2.0-1) unstable; urgency=medium
 
   * Runtime problems are recorded in ~/.local/state/sponux/sponux.log instead
