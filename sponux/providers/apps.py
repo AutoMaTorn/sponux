@@ -22,10 +22,18 @@ def search(query: str, limit: int = config.MAX_RESULTS):
     if not q:
         return []
 
-    # Not cached here on purpose. GIO already keeps this list and invalidates
-    # it when .desktop files change (7 ms cold, 1.8 ms after), so a cache of
-    # our own would only add a way to go stale — and the daemon is resident for
-    # days, so "stale" means a newly installed application is never found.
+    # Not cached here — a cache was removed because nothing ever invalidated
+    # it, so an application installed after the first search was never found
+    # until the daemon restarted, and the daemon is resident for days.
+    #
+    # The reason given for leaving it uncached was that GIO's own cache makes
+    # the call nearly free. Measured 2026-08-08 over 137 entries, that is not
+    # true here: eight consecutive calls in one process cost 41, 27, 26, 28,
+    # 26, 27, 28, 28 ms — GIO caches the parsing of .desktop files, not the
+    # GAppInfo list, which it rebuilds every time. So this is ~26 ms of every
+    # keystroke, and caching it again is worth doing properly: a Gio.FileMonitor
+    # on the XDG application directories, the way indexer.py already watches
+    # files. See the apps.search() section of ROADMAP.md.
     results = []
     for app in (a for a in Gio.AppInfo.get_all() if a.should_show()):
         name = app.get_display_name() or app.get_name() or ""
