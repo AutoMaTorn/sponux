@@ -35,6 +35,8 @@ _events = queue.Queue()       # (kind, path, other_path), main thread -> worker
 _monitors = {}                # directory path -> Gio.FileMonitor; main thread only
 _watch_limit_hit = False
 _file_limit_hit = False       # reported already; reset by a build under the limit
+_write_con = None             # the indexer thread's writer; see _writer()
+_write_key = None             # (dev, inode) the cached writer has open
 
 # Directories armed per main-loop iteration. Arming is a cheap inotify_add_watch,
 # but a home directory can hold thousands of them and the main thread is drawing
@@ -544,13 +546,73 @@ def _add_path(con, path: str, rules, glib):
         glib.idle_add(_arm_chunks(dirs, rules.max_watches))
 
 
+def search_cost_ms(rows: int) -> float:
+    """Roughly what one keystroke costs to search an index of `rows` entries.
+
+    The query scans and sorts, so the cost is linear in the table: measured at
+    0.36/2.3/12.9/25.3/51.4 ms for 1k/10k/50k/100k/200k rows, which is 0.26 ms
+    per thousand with the small-table end slightly cheaper than the fit. Only
+    ever used to tell the user which order of magnitude they are in, so a
+    straight line through those points is precision enough — and it is a guide
+    to this machine's numbers, not a promise about theirs.
+    """
+    return rows * 0.00026
+
+
+def _writer():
+    """The indexer thread's writable connection, opened once and kept open.
+
+    _apply_events() runs once per drained batch, and opening a connection
+    measured 0.37 ms against 0.04 ms to apply a one-event batch — nine tenths
+    of a quiet batch was the open, and the three PRAGMAs are most of that
+    (dropping journal_mode, which is persistent anyway, saves 0.01 ms of it, so
+    there is nothing to trim; only not opening at all helps).
+
+    Keeping a connection costs one guard. The daemon outlives the file: delete
+    ~/.cache/sponux and the cached handle still points at an unlinked inode,
+    where every update would be written and never seen again. Comparing
+    (dev, inode) costs a stat, ~1 µs against the 370 µs saved, so it is checked
+    on every call rather than trusted.
+    """
+    global _write_con, _write_key
+    try:
+        st = os.stat(config.INDEX_DB)
+        key = (st.st_dev, st.st_ino)
+    except OSError:
+        key = None
+    if _write_con is not None and key is not None and key == _write_key:
+        return _write_con
+
+    close_writer()
+    con = connect()
+    _ensure_schema(con)
+    con.commit()
+    try:
+        st = os.stat(config.INDEX_DB)
+        _write_key = (st.st_dev, st.st_ino)
+    except OSError:                      # opened it, cannot stat it: do not cache
+        _write_key = None
+    _write_con = con
+    return con
+
+
+def close_writer():
+    """Drop the cached writer. For tests, and for a database that moved."""
+    global _write_con, _write_key
+    if _write_con is not None:
+        try:
+            _write_con.close()
+        except Exception:
+            pass
+    _write_con, _write_key = None, None
+
+
 def _apply_events(batch, rules):
     """Apply a batch of filesystem events to the index. Indexer thread."""
     _, glib = _gio()
     with _lock:
-        con = connect()
+        con = _writer()
         try:
-            _ensure_schema(con)
             for kind, path, other in batch:
                 if path is None:
                     continue
@@ -563,8 +625,14 @@ def _apply_events(batch, rules):
                     if other is not None:
                         _add_path(con, other, rules, glib)
             con.commit()
-        finally:
-            con.close()
+        except Exception:
+            # The connection no longer closes at the end of the call, so a
+            # half-applied batch would leave its write transaction open for as
+            # long as the daemon runs, and the next full rebuild would sit on
+            # busy_timeout until it gave up. Undo it and start clean.
+            con.rollback()
+            close_writer()
+            raise
 
 
 def _drain(first, limit=500):

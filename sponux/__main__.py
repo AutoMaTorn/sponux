@@ -375,6 +375,19 @@ def _check_config():
         elif rows >= index.max_files * 0.9:
             print(f"  note    the index holds {rows} entries, nearing "
                   f"max_files = {index.max_files}")
+        # Size costs latency long before it costs correctness, and the search
+        # runs on the GTK main thread, so this is the number that decides
+        # whether typing stays smooth. Nothing else reports it.
+        if rows >= config.SEARCH_SLOW_ROWS:
+            print(f"  WARN    the index holds {rows} entries; a keystroke "
+                  f"searches it in roughly {indexer.search_cost_ms(rows):.0f} ms, "
+                  f"and the search runs on the UI thread — narrow [index] "
+                  f"roots/exclude, or lower max_files")
+            warnings += 1
+        elif rows >= config.SEARCH_SLOW_ROWS // 2:
+            print(f"  note    the index holds {rows} entries, about "
+                  f"{indexer.search_cost_ms(rows):.0f} ms per keystroke; "
+                  f"still comfortable, worth watching as it grows")
 
     from . import usage
     enabled, weight = usage._settings()

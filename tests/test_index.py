@@ -411,6 +411,57 @@ finally:
 indexer._file_limit_hit = False
 indexer.build_index(rules=indexer.IndexRules.from_settings())
 
+# ---- the cached writer ------------------------------------------------
+#
+# _apply_events() keeps its connection between batches, which is worth ~0.37 ms
+# of the ~0.41 ms a quiet batch costs. The whole price of that is the guard
+# below: the daemon outlives the database file, and a handle to a deleted one
+# accepts writes that nobody will ever read back.
+
+live = indexer.IndexRules.from_settings()
+indexer.close_writer()
+apply(("add", str(TREE / "docs" / "cached.md"), None))
+first = indexer._write_con
+check("the writer is kept after a batch", first is not None, True)
+apply(("add", str(TREE / "docs" / "cached2.md"), None))
+check("…and the next batch reuses it", indexer._write_con is first, True)
+
+# Replace the database the way deleting ~/.cache would: same path, new inode.
+os.remove(indexer.config.INDEX_DB)
+indexer.build_index(rules=live)
+apply(("add", str(TREE / "docs" / "after-swap.md"), None))
+check("a replaced database gets a new connection",
+      indexer._write_con is not first, True)
+check("…and the write lands in the file that is actually there",
+      "docs/after-swap.md" in indexed(), True)
+
+# A failing batch must not leave its transaction open on a connection that now
+# outlives the call — the next rebuild would sit on busy_timeout instead.
+broken = indexer._write_con
+real_add = indexer._add_path
+indexer._add_path = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+try:
+    apply(("add", str(TREE / "docs" / "never.md"), None))
+except RuntimeError:
+    pass
+finally:
+    indexer._add_path = real_add
+check("a failed batch drops the connection rather than holding a lock",
+      indexer._write_con is None, True)
+check("…and the rebuild after it still works",
+      indexer.build_index(rules=live) > 0, True)
+del broken
+
+# What --check reports the latency from. Only ever used to name an order of
+# magnitude, but it has to grow with the table and stay in the right one.
+check("the search cost estimate is monotonic",
+      indexer.search_cost_ms(10_000) < indexer.search_cost_ms(100_000), True)
+check("…and puts 200k rows in the tens of milliseconds",
+      20 < indexer.search_cost_ms(200_000) < 100, True)
+check("…with the warning threshold below that",
+      indexer.search_cost_ms(indexer.config.SEARCH_SLOW_ROWS) < 20, True)
+
+indexer.close_writer()
 shutil.rmtree(_TMP, ignore_errors=True)
 
 print()

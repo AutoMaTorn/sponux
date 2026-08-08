@@ -263,11 +263,19 @@ def search(query: str, limit: int = config.MAX_RESULTS):
     if con is None:
         return []
 
-    # One character matches half the home directory, and the SQL ordering can
-    # only guess at which rows are worth ranking — so single-character queries
-    # get a hard candidate cap instead of the usual oversampling. The apps
-    # provider answers those queries too; files sitting them out looked like
-    # "no such file" rather than "keep typing".
+    # One character matches half the home directory, so it is not worth
+    # oversampling for the ranking below: a single-character query asks for no
+    # more rows than it will show. The apps provider answers those queries too;
+    # files sitting them out looked like "no such file" rather than "keep
+    # typing".
+    #
+    # This bounds the ranking, not the search. The query below cannot use
+    # idx_name_lower — a leading '%' rules it out, and the ORDER BY then sorts
+    # every match before LIMIT applies — so SQLite reads the whole table either
+    # way. Measured: 51 ms for a three-character query over 200 000 rows
+    # against 55 ms for a one-character one, the smaller limit notwithstanding.
+    # That is the size where this stops being free, and it is what
+    # config.SEARCH_SLOW_ROWS has --check warn about.
     candidates = limit * CANDIDATE_FACTOR if len(q) > 1 else limit
     like = f"%{q}%"
     prefix = f"{q}%"

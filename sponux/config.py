@@ -62,7 +62,25 @@ SKIP_HIDDEN_DIRS = True
 SKIP_HIDDEN_FILES = True
 
 # Safety cap so a pathological home dir can't blow up the index.
+#
+# This bounds correctness (what is findable), not comfort. Comfort runs out
+# first: `WHERE name_lower LIKE '%q%'` cannot use the index and the ORDER BY
+# sorts every match, so a keystroke costs, measured on this machine —
+#
+#     1 000 rows   0.4 ms      50 000 rows   13 ms
+#    10 000 rows   2.3 ms     100 000 rows   25 ms
+#                             200 000 rows   51 ms
+#
+# — and the search runs on the GTK main thread, where the gap between
+# keystrokes is about 60 ms. So this cap sits well past the point where typing
+# stops being smooth; it is deliberately generous, and --check reports the
+# latency separately (see SEARCH_SLOW_ROWS) rather than lowering it for
+# everyone.
 MAX_FILES = 200_000
+
+# Where --check starts saying the index has grown into the latency above.
+# ~10 ms is the most a keystroke can cost without being felt, which lands here.
+SEARCH_SLOW_ROWS = 40_000
 
 # How often (seconds) the resident daemon rebuilds the index in full. This is
 # the safety net under the watches below — it is what recovers from events the
