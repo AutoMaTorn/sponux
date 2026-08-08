@@ -18,6 +18,9 @@ def _reindex():
     print(f"Indexing {', '.join(rules.roots)}…", flush=True)
     n = indexer.build_index(rules=rules)
     print(f"Indexed {n} entries into {indexer.config.INDEX_DB}")
+    if n >= rules.max_files:
+        print(f"  WARNING: stopped at max_files = {rules.max_files}; the rest "
+              "of the tree is unfindable until the limit is raised")
     if rules.include:
         print(f"  including {', '.join(rules.include)}")
     if rules.exclude:
@@ -352,6 +355,26 @@ def _check_config():
         print("  WARN    no periodic rebuild, so dropped inotify events are "
               "never recovered")
         warnings += 1
+
+    # An index sitting at max_files means every file past the limit is
+    # unfindable, and nothing but this says so outside the runtime log.
+    import sqlite3
+    try:
+        con = indexer.connect(readonly=True)
+        try:
+            rows = con.execute("SELECT COUNT(*) FROM files").fetchone()[0]
+        finally:
+            con.close()
+    except sqlite3.OperationalError:
+        rows = None  # no index yet, or no table yet: nothing to compare
+    if rows is not None:
+        if rows >= index.max_files:
+            print(f"  WARN    the index holds {rows} entries — at max_files = "
+                  f"{index.max_files}, so it is truncated; raise the limit")
+            warnings += 1
+        elif rows >= index.max_files * 0.9:
+            print(f"  note    the index holds {rows} entries, nearing "
+                  f"max_files = {index.max_files}")
 
     from . import usage
     enabled, weight = usage._settings()

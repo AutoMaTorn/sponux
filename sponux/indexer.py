@@ -34,6 +34,7 @@ _lock = threading.Lock()      # serialises writers within this process
 _events = queue.Queue()       # (kind, path, other_path), main thread -> worker
 _monitors = {}                # directory path -> Gio.FileMonitor; main thread only
 _watch_limit_hit = False
+_file_limit_hit = False       # reported already; reset by a build under the limit
 
 # Directories armed per main-loop iteration. Arming is a cheap inotify_add_watch,
 # but a home directory can hold thousands of them and the main thread is drawing
@@ -330,6 +331,7 @@ def _remember_inode(st, seen) -> bool:
 
 def build_index(roots=None, rules=None, dirs_out=None) -> int:
     """Rebuild the index from scratch. Returns the number of rows written."""
+    global _file_limit_hit
     rules = rules or IndexRules.from_settings()
     roots = roots or rules.roots
     with _lock:
@@ -353,9 +355,22 @@ def build_index(roots=None, rules=None, dirs_out=None) -> int:
                     "INSERT OR IGNORE INTO files VALUES (?,?,?,?)", batch
                 )
             con.commit()
-            return n
         finally:
             con.close()
+    # A truncated build silently costs the user every result past the limit,
+    # and the log is the only place that can be seen from. Report the
+    # transition, not every hourly rebuild — the same reason _watch() speaks
+    # once. A build that fits again resets the flag, so a later relapse is
+    # reported too.
+    if n >= rules.max_files:
+        if not _file_limit_hit:
+            _file_limit_hit = True
+            report.note(f"index stopped at max_files = {rules.max_files}; "
+                        f"everything past that is unfindable until the limit "
+                        f"is raised in config.toml")
+    else:
+        _file_limit_hit = False
+    return n
 
 
 # ---- incremental updates ----------------------------------------------

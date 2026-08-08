@@ -27,8 +27,27 @@ def copy_text(text: str):
     from gi.repository import Gdk
 
     display = Gdk.Display.get_default()
-    if display is not None:
-        display.get_clipboard().set(text)
+    if display is None:
+        return
+    clipboard = display.get_clipboard()
+    clipboard.set(text)
+    # On X11 the clipboard belongs to the process that set it, so left like
+    # this the text dies with the daemon: copy a path, Ctrl+Q, and there is
+    # nothing to paste. store_async() asks the clipboard manager to keep a
+    # copy; with none running it is simply a no-op. The synchronous store()
+    # is not exposed to PyGObject, so the async call is given a bounded spin
+    # of the main context — without it "copy, then immediately Ctrl+Q" would
+    # quit before the manager was even asked.
+    from gi.repository import GLib
+    import time
+
+    done = []
+    clipboard.store_async(GLib.PRIORITY_DEFAULT, None,
+                          lambda cb, res: done.append(True))
+    context = GLib.MainContext.default()
+    deadline = time.monotonic() + 0.2
+    while not done and time.monotonic() < deadline:
+        context.iteration(True)
 
 
 def fuzzy_score(query: str, text: str) -> float:

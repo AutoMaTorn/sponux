@@ -63,14 +63,14 @@ brings in. sponux itself is a 42 KB package, 139 KB installed.
 **Debian / Ubuntu** — the package declares its dependencies itself:
 
 ```sh
-sudo apt install ./sponux_0.2.0-1_all.deb
+sudo apt install ./sponux_0.2.1-1_all.deb
 ```
 
 **Anywhere else** — there is nothing to install. Unpack it and run it:
 
 ```sh
-tar xf sponux-0.2.0.tar.gz -C ~/opt
-~/opt/sponux-0.2.0/bin/sponux
+tar xf sponux-0.2.1.tar.gz -C ~/opt
+~/opt/sponux-0.2.1/bin/sponux
 ```
 
 Or clone this repository and run `bin/sponux` out of it — same thing.
@@ -123,9 +123,9 @@ sponux --reindex                     # rebuild the file index now
 ## Build the packages
 
 ```sh
-python3 tools/mkdeb.py         # dist/sponux_0.2.0-1_all.deb   (needs dpkg-deb)
-python3 tools/mktarball.py     # dist/sponux-0.2.0.tar.gz      (unpack and run)
-python3 tools/mkwheel.py       # dist/sponux-0.2.0-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.2.1-1_all.deb   (needs dpkg-deb)
+python3 tools/mktarball.py     # dist/sponux-0.2.1.tar.gz      (unpack and run)
+python3 tools/mkwheel.py       # dist/sponux-0.2.1-py3-none-any.whl
 ```
 
 Pure Python, so all three are architecture-independent, and all three read their

@@ -257,12 +257,18 @@ def _complete(parent: str, stem: str, limit: int):
 
 def search(query: str, limit: int = config.MAX_RESULTS):
     q = query.strip().lower()
-    if len(q) < 2:  # avoid flooding results on a single character
+    if not q:
         return []
     con = _read_con()
     if con is None:
         return []
 
+    # One character matches half the home directory, and the SQL ordering can
+    # only guess at which rows are worth ranking — so single-character queries
+    # get a hard candidate cap instead of the usual oversampling. The apps
+    # provider answers those queries too; files sitting them out looked like
+    # "no such file" rather than "keep typing".
+    candidates = limit * CANDIDATE_FACTOR if len(q) > 1 else limit
     like = f"%{q}%"
     prefix = f"{q}%"
     try:
@@ -271,7 +277,7 @@ def search(query: str, limit: int = config.MAX_RESULTS):
                WHERE name_lower LIKE ?
                ORDER BY (name_lower LIKE ?) DESC, is_dir DESC, length(name) ASC
                LIMIT ?""",
-            (like, prefix, limit * CANDIDATE_FACTOR),
+            (like, prefix, candidates),
         ).fetchall()
     except Exception:
         return []

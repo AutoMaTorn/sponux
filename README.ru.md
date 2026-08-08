@@ -66,14 +66,14 @@ GTK 4. Сам sponux — пакет на 42 КБ, 139 КБ установлен�
 **Debian / Ubuntu** — пакет объявляет зависимости сам:
 
 ```sh
-sudo apt install ./sponux_0.2.0-1_all.deb
+sudo apt install ./sponux_0.2.1-1_all.deb
 ```
 
 **Где угодно ещё** — устанавливать нечего. Распакуйте и запускайте:
 
 ```sh
-tar xf sponux-0.2.0.tar.gz -C ~/opt
-~/opt/sponux-0.2.0/bin/sponux
+tar xf sponux-0.2.1.tar.gz -C ~/opt
+~/opt/sponux-0.2.1/bin/sponux
 ```
 
 Либо клонируйте этот репозиторий и запускайте `bin/sponux` из него — то же самое.
@@ -126,9 +126,9 @@ sponux --reindex                     # перестроить индекс фа�
 ## Сборка пакетов
 
 ```sh
-python3 tools/mkdeb.py         # dist/sponux_0.2.0-1_all.deb   (нужен dpkg-deb)
-python3 tools/mktarball.py     # dist/sponux-0.2.0.tar.gz      (распаковать и запускать)
-python3 tools/mkwheel.py       # dist/sponux-0.2.0-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.2.1-1_all.deb   (нужен dpkg-deb)
+python3 tools/mktarball.py     # dist/sponux-0.2.1.tar.gz      (распаковать и запускать)
+python3 tools/mkwheel.py       # dist/sponux-0.2.1-py3-none-any.whl
 ```
 
 Чистый Python, поэтому все три не зависят от архитектуры и все три читают

@@ -130,8 +130,11 @@ class SponuxWindow(Gtk.ApplicationWindow):
         self.add_controller(key)
 
         # Tell the WM this is a floating dialog *before* it is first mapped,
-        # so tiling WMs don't tile the card. See placement.py.
-        self.connect("realize", lambda _w: placement.prepare(self))
+        # so tiling WMs don't tile the card. On Wayland with gtk4-layer-shell
+        # the window becomes an overlay layer surface instead — that too must
+        # happen before realize. See placement.py.
+        if not placement.setup(self):
+            self.connect("realize", lambda _w: placement.prepare(self))
 
         # Connected unconditionally; whether it acts is decided in the handler,
         # so [window] hide_on_focus_loss can be changed without a restart.

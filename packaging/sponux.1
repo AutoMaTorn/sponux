@@ -27,7 +27,9 @@ override-redirect) and places itself at the top-centre of whichever monitor
 holds the pointer.
 It claims the keyboard focus but never becomes the window manager's focused
 window, so a tiling WM keeps its focus highlight where it was.
-Under Wayland the placement is left to the compositor.
+Under Wayland the window becomes an overlay layer surface when the optional
+gtk4-layer-shell is installed; without it the placement is left to the
+compositor.
 .SH OPTIONS
 .TP
 .B \-\-daemon

@@ -242,6 +242,15 @@ check("the included hidden tree is in it",
 check("the other hidden tree is not",
       [p for p in indexed() if p.startswith(".cache")], [])
 
+# Apps and the calculator answer a one-letter query; files sitting it out
+# looked like "no such file" rather than "keep typing".
+from sponux.providers import files as files_provider  # noqa: E402
+
+check("a single character searches files too",
+      "docs" in [r.title for r in files_provider.search("d")], True)
+check("an empty query still returns nothing",
+      files_provider.search("   "), [])
+
 
 def apply(*events):
     """Feed the indexer the events a file monitor would have delivered."""
@@ -378,6 +387,29 @@ check("the link itself is still indexed",
 check("but nothing is walked through it",
       [p for p, *_ in found if "/loop/" in p], [])
 os.remove(TREE / "docs" / "loop")
+
+# Hitting max_files must be said out loud: the rows past the limit simply
+# vanish from search, and without the note there is no trace of why.
+notes = []
+real_note = indexer.report.note
+indexer.report.note = notes.append
+try:
+    capped = rules(roots=[str(TREE)], max_files=3)
+    check("a truncated build reports the cap",
+          indexer.build_index(rules=capped), 3)
+    indexer.build_index(rules=capped)  # the steady state must not re-report
+    check("…once per transition, not once per rebuild",
+          len(notes), 1)
+    check("the note names the limit", "max_files = 3" in notes[0], True)
+
+    roomy = rules(roots=[str(TREE)])
+    indexer.build_index(rules=roomy)   # fits again: the flag resets
+    indexer.build_index(rules=capped)  # so a relapse is reported too
+    check("a relapse after recovering is reported again", len(notes), 2)
+finally:
+    indexer.report.note = real_note
+indexer._file_limit_hit = False
+indexer.build_index(rules=indexer.IndexRules.from_settings())
 
 shutil.rmtree(_TMP, ignore_errors=True)
 

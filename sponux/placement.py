@@ -7,9 +7,11 @@ Rather than asking every user to add a WM rule, we declare what this window
 is through EWMH — a dialog, kept above, absent from taskbar and pager, which
 every WM floats — and then position it ourselves with plain X11 requests.
 
-Everything here is X11-only and best effort: under Wayland, or when libX11
-is unavailable, the functions do nothing and the compositor places the
-window itself.
+Everything here is X11-only and best effort: under Wayland without
+gtk4-layer-shell, or when libX11 is unavailable, the X11 functions do nothing
+and the compositor places the window itself. With gtk4-layer-shell present,
+setup() turns the window into an overlay layer surface instead, which is how
+a Wayland compositor is talked into floating, centring and focusing it.
 """
 
 import ctypes
@@ -20,7 +22,7 @@ import gi
 gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk  # noqa: E402
 
-from . import config  # noqa: E402
+from . import config, report  # noqa: E402
 
 try:
     gi.require_version("GdkX11", "4.0")
@@ -59,6 +61,94 @@ class _XSetWindowAttributes(ctypes.Structure):
 _lib = None   # ctypes libX11 handle, or False once we know it is unusable
 _dpy = None   # our own Display* connection (separate from GDK's)
 _atoms = {}
+
+
+# ---- Wayland, via gtk4-layer-shell ------------------------------------
+#
+# Wayland gives a plain toplevel no placement at all — sway would tile the
+# launcher. gtk4-layer-shell speaks wlr-layer-shell for us: an overlay-layer
+# surface is floated, placed and focusable by protocol. The library is an
+# optional runtime dependency: absent, everything falls back to "the
+# compositor decides", exactly the behaviour there was before.
+
+_layer_shell = None      # the module, or False once known to be unusable
+_layer_shell_noted = False
+
+
+def _ls():
+    """The Gtk4LayerShell module on a session that supports it, else None."""
+    global _layer_shell
+    if _layer_shell is None:
+        _layer_shell = False
+        try:
+            gi.require_version("Gtk4LayerShell", "1.0")
+            from gi.repository import Gtk4LayerShell
+        except (ValueError, ImportError):
+            Gtk4LayerShell = None
+        # is_supported() checks both that this is a Wayland session and that
+        # the compositor speaks the layer-shell protocol.
+        if Gtk4LayerShell is not None and Gtk4LayerShell.is_supported():
+            _layer_shell = Gtk4LayerShell
+    return _layer_shell or None
+
+
+def setup(window):
+    """Make the window a layer surface on Wayland. Call before ``realize``.
+
+    Returns True when it did. On X11, or without gtk4-layer-shell, returns
+    False and the X11 path in prepare()/center()/take_input() runs instead.
+    """
+    global _layer_shell_noted
+    ls = _ls()
+    if ls is None:
+        display = Gdk.Display.get_default()
+        if (display is not None and type(display).__name__ == "WaylandDisplay"
+                and not _layer_shell_noted):
+            _layer_shell_noted = True
+            report.note("Wayland without gtk4-layer-shell: the compositor "
+                        "places the window; install gtk4-layer-shell for "
+                        "centring and focus")
+        return False
+    ls.init_for_window(window)
+    ls.set_layer(window, ls.Layer.OVERLAY)
+    ls.set_namespace(window, "sponux")
+    # ON_DEMAND, not EXCLUSIVE: take the keyboard while the launcher is up,
+    # but never hold it hostage if something goes wrong with the surface.
+    ls.set_keyboard_mode(window, ls.KeyboardMode.ON_DEMAND)
+    return True
+
+
+def _on_layer_shell(window) -> bool:
+    ls = _ls()
+    return ls is not None and ls.is_layer_window(window)
+
+
+def _place_layer(window, ls):
+    """Position the layer surface per [window] position.
+
+    Horizontal centring comes free (no left/right anchors). "center" anchors
+    nothing, which the protocol reads as centred; "top" anchors the top edge
+    with a margin of top_fraction of the output's height. Which output is the
+    compositor's choice — Wayland will not say where the pointer is — and is
+    in practice the focused one, which is where the user is looking.
+    """
+    settings = getattr(window, "settings", None)
+    position = settings.position if settings else config.POSITION
+    top_fraction = settings.top_fraction if settings else config.TOP_FRACTION
+    if position == "center":
+        ls.set_anchor(window, ls.Edge.TOP, False)
+        return
+    surface = window.get_surface()
+    monitor = (window.get_display().get_monitor_at_surface(surface)
+               if surface is not None else None)
+    if monitor is None:
+        monitors = list(window.get_display().get_monitors())
+        monitor = monitors[0] if monitors else None
+    if monitor is None:
+        return
+    ls.set_anchor(window, ls.Edge.TOP, True)
+    ls.set_margin(window, ls.Edge.TOP,
+                  int(monitor.get_geometry().height * top_fraction))
 
 
 # ---- raw X11 ----------------------------------------------------------
@@ -289,6 +379,10 @@ def center(window):
     Safe to call on every show; the WM's own placement runs at map time, so
     this has to happen after the window is mapped in order to win.
     """
+    ls = _ls()
+    if ls is not None and ls.is_layer_window(window):
+        _place_layer(window, ls)
+        return
     xid = _xid(window)
     if not xid:
         return
