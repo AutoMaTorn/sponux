@@ -40,6 +40,21 @@ def _write_config(force):
     return 0
 
 
+def _print_history(label: str, key: str):
+    """One line about what `key` has done for its own ranking, if anything."""
+    import datetime
+
+    from . import usage
+
+    seen = usage.stats(key)
+    if seen is None:
+        return
+    hits, last = seen
+    when = datetime.datetime.fromtimestamp(last).strftime("%Y-%m-%d %H:%M")
+    print(f"  {label:<13} {hits}x, last {when} "
+          f"(+{usage.bonus(key):.1f} to its rank)")
+
+
 def _which(argv):
     """Explain which application would open a path, and why.
 
@@ -74,21 +89,23 @@ def _which(argv):
         print(f"  content type  {ctype}")
 
         from . import usage
-        seen = usage.stats(usage.key_for_file(path))
-        if seen is not None:
-            import datetime
-            hits, last = seen
-            when = datetime.datetime.fromtimestamp(last).strftime("%Y-%m-%d %H:%M")
-            print(f"  opened        {hits}x, last {when} "
-                  f"(+{usage.bonus(usage.key_for_file(path)):.1f} to its rank)")
+        _print_history("opened", usage.key_for_file(path))
         if rule is None:
             default = Gio.AppInfo.get_default_for_type(ctype, False)
             name = default.get_display_name() if default else "nothing registered"
             print("  matched       no rule in config.toml")
             print(f"  opens with    the desktop default: {name}")
+            if default is not None:
+                _print_history("that app", usage.key_for_appinfo(default))
         else:
             print(f"  matched       {rule}")
             print(f"  command       {shlex.join(argv_)}")
+            # Which application the command belongs to is a guess, and it is
+            # the guess that decides whose history opening this path feeds —
+            # so it is worth being able to see it rather than infer it.
+            app = files_provider.app_for_command(argv_[0])
+            if app is not None:
+                _print_history("that app", usage.key_for_appinfo(app))
             if shutil.which(argv_[0]) is None:
                 print(f"  PROBLEM       {argv_[0]!r} is not on PATH; sponux would "
                       "fall back to the desktop default")

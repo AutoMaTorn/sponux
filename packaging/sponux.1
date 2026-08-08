@@ -62,7 +62,8 @@ Explain how
 .I PATH
 would be opened: its content type, which rule in
 .I config.toml
-matched, the exact command, and whether that command exists.
+matched, the exact command, whether that command exists, and what
+the path and the application opening it have earned for their ranking.
 The mime types are not guessable \(em GIO reports a
 .I .ts
 file as Qt Linguist \(em so this is the honest way to write a rule.
@@ -177,7 +178,8 @@ is the intended way to restyle it.
 The filename index. Safe to delete; it rebuilds.
 .TP
 .I ~/.local/state/sponux/usage.db
-What you have opened, and when, for ranking.
+What you have opened, and when, for ranking \(em files, and the
+applications that opened them as well as those launched by name.
 .TP
 .I ~/.local/state/sponux/sponux.log
 What went wrong while running \(em a command that would not start, a

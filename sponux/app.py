@@ -388,7 +388,13 @@ class SponuxWindow(Gtk.ApplicationWindow):
 
     def _activate_open_with(self, app, result, remember):
         usage.record(result.usage_key)
-        files_provider.open_with(app, result.path)
+        # The application is counted too, and only if it actually started.
+        # Picking one here is the plainest statement of "this is what I open
+        # these with" the launcher ever gets; before it was counted, opening
+        # every project folder with an editor left that editor ranked as though
+        # it had never been used.
+        if files_provider.open_with(app, result.path):
+            usage.record_app(app)
         if not remember:
             return
         command = files_provider.command_for(app)

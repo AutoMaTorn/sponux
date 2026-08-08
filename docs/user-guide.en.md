@@ -209,8 +209,9 @@ since login.
 ## Opening files your way
 
 Press `Shift+Enter` on a file to get the list of applications for it: the ones
-registered for that kind of file first, then everything else installed. Type to
-filter, `Enter` to open, `Esc` to go back to your search.
+you have opened things with before first, then the ones registered for that kind
+of file, then everything else installed. Type to filter, `Enter` to open, `Esc`
+to go back to your search.
 
 The first row of that list is a switch. Turn it on and your choice is *also*
 written into `config.toml` as a rule, so the next file of the same kind opens
@@ -332,8 +333,17 @@ not dominate every search afterwards.
 
 The bonus is capped deliberately below the gap between match qualities, so
 history settles near-ties but never overrules the query: a prefix match still
-beats a heavily used substring match. `sponux --which PATH` reports what a given
-file has earned.
+beats a heavily used substring match.
+
+Applications count the same way, and not only when you launch one by name.
+Opening something *with* an application is a use of it too — through
+`Shift+Enter`, or through an `[open]` rule — so the editor you open every
+project folder with rises in the app search, and comes back at the top of the
+next `Shift+Enter` list instead of wherever the desktop filed it. Applications
+you have never chosen keep their usual order.
+
+`sponux --which PATH` reports what a file has earned, which application would
+open it, and what that application has earned.
 
 Set `frecency = false` to rank on the query alone.
 

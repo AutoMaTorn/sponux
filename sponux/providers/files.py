@@ -35,15 +35,28 @@ def _read_con():
 
 
 def _open(path: str, is_dir: bool = False):
-    """Open a path with the configured application, else the desktop default."""
+    """Open a path with the configured application, else the desktop default.
+
+    Whichever application ends up doing it is counted as a use of that
+    application, so the editor everything is opened with rises in the app
+    search too. Counted here rather than in the window, which counts the file:
+    this is the only place that knows which application it turned out to be.
+    Both calls happen after the window is hidden, off the typing path.
+    """
     argv = userconfig.opener_command(path, is_dir)
     if argv and _spawn(argv):
+        app = app_for_command(argv[0])
+        if app is not None:
+            usage.record_app(app)
         return
     try:
         uri = GLib.filename_to_uri(path, None)
         Gio.AppInfo.launch_default_for_uri(uri, None)
     except GLib.Error:
-        pass
+        return
+    default = Gio.AppInfo.get_default_for_type(content_type(path, is_dir), False)
+    if default is not None:
+        usage.record_app(default)
 
 
 def _spawn(argv) -> bool:
@@ -74,7 +87,8 @@ def content_type(path: str, is_dir: bool = False) -> str:
 
 
 def apps_for(path: str, is_dir: bool = False):
-    """Applications to offer for a path: the registered ones, then the rest.
+    """Applications to offer for a path: what has been chosen here before,
+    then the ones registered for the type, then the rest.
 
     Registration alone is not enough to build the list from. A file with no
     extension — ``~/.config/i3/config``, ``.bashrc`` — is
@@ -100,7 +114,10 @@ def apps_for(path: str, is_dir: bool = False):
          if a.should_show() and a.get_id() not in seen),
         key=lambda a: (a.get_display_name() or "").lower(),
     )
-    return registered + others
+    # What has been chosen here before comes first, across both groups; the
+    # order built above survives as the tie-break for everything else. See
+    # usage.order_by_usage().
+    return usage.order_by_usage(registered + others, usage.key_for_appinfo)
 
 
 def command_for(app) -> str:
@@ -119,6 +136,34 @@ def command_for(app) -> str:
         if argv:
             return shlex.join(argv)
     return app.get_executable() or ""
+
+
+def app_for_command(program: str, apps=None):
+    """The installed application a configured opener runs, if it is one.
+
+    `[open]` rules are command lines — "code", "kitty -e nvim" — and nothing in
+    them names a .desktop entry, so the executable is the only link back to the
+    application list. The reverse of command_for(), and lossier: it is used to
+    decide whose history to credit, never to decide what runs.
+
+    Only an unambiguous answer counts. Several entries can run the same binary
+    (an application and its URL handler, a wrapper and the thing it wraps), and
+    crediting an arbitrary one of them means the ranking quietly learns the
+    wrong application. `should_show()` settles most of it, since the hidden
+    halves of those pairs are hidden precisely because they are not the entry
+    anyone means; an id equal to the command settles the rest.
+    """
+    name = os.path.basename(program)
+    if not name:
+        return None
+    if apps is None:
+        apps = Gio.AppInfo.get_all()
+    matches = [a for a in apps if a.should_show()
+               and os.path.basename(a.get_executable() or "") == name]
+    if len(matches) == 1:
+        return matches[0]
+    exact = [a for a in matches if (a.get_id() or "") == f"{name}.desktop"]
+    return exact[0] if len(exact) == 1 else None
 
 
 def open_with(app, path: str) -> bool:

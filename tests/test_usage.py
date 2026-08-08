@@ -140,6 +140,112 @@ after = [r.subtitle for r in files_provider.search("notes")]
 check("the one that was opened is now first", after[0], winner)
 check("the other is still offered", after[1], loser)
 
+# ---- applications you open things with --------------------------------
+#
+# Opening a project folder with an editor is a use of that editor. Only the
+# folder used to be counted, so the editor stayed ranked as though it had never
+# been touched, and the "open with" list offered it in the same place forever.
+
+
+class FakeApp:
+    """The parts of Gio.AppInfo that ranking touches.
+
+    A stub rather than the real thing because CI installs GTK and no
+    applications: a check written against whatever .desktop files happen to
+    exist would pass or fail for reasons that have nothing to do with sponux.
+    The one check below that does need a real application says so, and skips.
+    """
+
+    def __init__(self, app_id, name, executable="", shown=True):
+        self._id, self._name = app_id, name
+        self._exe, self._shown = executable, shown
+
+    def get_id(self):
+        return self._id
+
+    def get_display_name(self):
+        return self._name
+
+    def get_name(self):
+        return self._name
+
+    def get_executable(self):
+        return self._exe
+
+    def should_show(self):
+        return self._shown
+
+    def __repr__(self):
+        return f"<{self._id or self._name}>"
+
+
+code = FakeApp("code.desktop", "Visual Studio Code", "/usr/bin/code")
+files_app = FakeApp("org.gnome.Nautilus.desktop", "Files", "/usr/bin/nautilus")
+gedit = FakeApp("org.gnome.gedit.desktop", "Text Editor", "/usr/bin/gedit")
+# Same binary, hidden: the shape that would otherwise make "code" ambiguous.
+handler = FakeApp("code-url-handler.desktop", "Code URL Handler",
+                  "/usr/bin/code", shown=False)
+
+usage.forget_all()
+check("an application is counted under its id",
+      usage.key_for_appinfo(code), "app:code.desktop")
+check("...and under its name when it has no id",
+      usage.key_for_appinfo(FakeApp(None, "Nameless")), "app:Nameless")
+check("recording one returns the key it was counted under",
+      usage.record_app(code, now=NOW), usage.key_for_appinfo(code))
+check("...and that key now carries a bonus",
+      usage.bonus(usage.key_for_appinfo(code), now=NOW) > 0, True)
+
+# The bug this whole thing dies of is a key mismatch: counted under one string,
+# searched under another, no error anywhere. Checked against a real
+# application, since that is where the two sides actually have to meet.
+from gi.repository import Gio  # noqa: E402
+from sponux.providers import apps as apps_provider  # noqa: E402
+
+real = [a for a in Gio.AppInfo.get_all()
+        if a.should_show() and a.get_display_name()]
+if real:
+    sample = real[0]
+    name = sample.get_display_name()
+    hits = [r for r in apps_provider.search(name, 50) if r.title == name]
+    check("the apps provider ranks on the key open-with records",
+          bool(hits) and hits[0].usage_key == usage.key_for_appinfo(sample),
+          True)
+else:
+    print("skip  no applications installed here to check the key against")
+
+# The "open with" list, which is ordered by this and nothing else.
+shelf = [files_app, gedit, code]      # an editor is not registered for a folder
+usage.forget_all()
+check("with no history the order is left exactly as it was",
+      usage.order_by_usage(shelf, usage.key_for_appinfo, now=NOW), shelf)
+usage.record_app(code, now=NOW)
+check("what was chosen before comes first, out of the tail",
+      usage.order_by_usage(shelf, usage.key_for_appinfo, now=NOW)[0], code)
+usage.record_app(files_app, now=NOW - 400 * DAY)
+check("an old choice ranks above no choice, and below a recent one",
+      usage.order_by_usage(shelf, usage.key_for_appinfo, now=NOW),
+      [code, files_app, gedit])
+
+# Opening by an [open] rule credits the application that rule runs, which has
+# to be found from a command line: "code", not "code.desktop".
+installed = [code, handler, files_app]
+check("a command maps to the application that runs it",
+      files_provider.app_for_command("code", installed), code)
+check("...however the rule spells the path to it",
+      files_provider.app_for_command("/usr/local/bin/code", installed), code)
+check("a hidden twin does not make it ambiguous",
+      files_provider.app_for_command("code", installed) is code, True)
+check("an unknown command credits nobody",
+      files_provider.app_for_command("nvim", installed), None)
+rival = FakeApp("vscodium.desktop", "VSCodium", "/usr/bin/code")
+check("two visible entries for one binary credit neither",
+      files_provider.app_for_command("code", [rival, handler,
+                                              FakeApp("other.desktop", "Other",
+                                                      "/usr/bin/code")]), None)
+check("...unless one of them is the entry named after the command",
+      files_provider.app_for_command("code", [rival, code]), code)
+
 # ---- the first-run counter, which shares this state directory -------------
 #
 # It answers one question — does this install look untouched? — and the two

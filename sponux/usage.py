@@ -48,6 +48,20 @@ def key_for_app(app_id: str) -> str:
     return f"app:{app_id}"
 
 
+def key_for_appinfo(app) -> str:
+    """The key for a Gio.AppInfo, wherever it was reached from.
+
+    Everything that can end up launching an application has to arrive at the
+    same string — the provider that searches them, the "open with" list, the
+    `[open]` rules — or a use counted in one place is invisible in the others.
+    That failure is silent: the ranking simply never changes, and there is
+    nothing in the log to say why. The id is the identity ("code.desktop"); the
+    display name is the fallback for an entry that has none.
+    """
+    name = app.get_display_name() or app.get_name() or ""
+    return key_for_app(app.get_id() or name)
+
+
 def _connect():
     global _con
     if _con is None:
@@ -113,6 +127,19 @@ def record(key: str, now: float = None):
             _prune(con)
     except sqlite3.Error as exc:
         report.problem(f"cannot record use of {key}: {exc}")
+
+
+def record_app(app, now: float = None) -> str:
+    """Count one use of an application; return the key it was counted under.
+
+    Called wherever an application actually runs something, not only where one
+    was searched for: opening a project folder with an editor is a use of that
+    editor, and until it was counted the launcher kept ranking the editor as if
+    it had never been touched.
+    """
+    key = key_for_appinfo(app)
+    record(key, now)
+    return key
 
 
 def opens() -> int:
@@ -198,6 +225,23 @@ def bonus(key: str, now: float = None) -> float:
     # log2 so the tenth use matters less than the second, and the hundredth
     # barely at all — otherwise one heavily used file would win every search.
     return min(weight, weight * math.log2(1 + hits) / 4.0 * decay)
+
+
+def order_by_usage(items, key_of, now: float = None):
+    """`items` reordered most-used first, leaving what has no history put.
+
+    Python's sort is stable, so this promotes what has actually been opened
+    rather than ranking everything: the caller's own order — applications
+    registered for the type before the rest, the desktop default before its
+    peers — still decides between two things the user has never chosen.
+
+    Deliberately applied across the whole list rather than inside those groups.
+    The editor someone opens every project folder with is very often not
+    registered for `inode/directory` at all, and pinning it below the file
+    managers forever is the exact case this is here for.
+    """
+    now = time.time() if now is None else now
+    return sorted(items, key=lambda item: -bonus(key_of(item), now))
 
 
 def stats(key: str):

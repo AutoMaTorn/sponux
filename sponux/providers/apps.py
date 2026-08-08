@@ -41,7 +41,7 @@ def search(query: str, limit: int = config.MAX_RESULTS):
         if score <= 0:
             continue
 
-        key = usage.key_for_app(app.get_id() or name)
+        key = usage.key_for_appinfo(app)
         results.append(Result(
             title=name,
             subtitle=generic or app.get_description() or "Application",

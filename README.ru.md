@@ -171,6 +171,7 @@ python3 tests/test_daemon.py      # какая установка, по слов
 python3 tests/test_docs.py        # два руководства: паритет, ссылки, задокументированные флаги
 python3 tools/bench.py installed  # задержка открытия установленного sponux
 python3 tools/visual.py /tmp/shots  # снимок настоящего окна
+python3 tools/rankstats.py        # различает ли ранжирование приложения
 ```
 
 ## Структура

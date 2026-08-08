@@ -167,6 +167,7 @@ python3 tests/test_daemon.py      # which installation --check says is answering
 python3 tests/test_docs.py        # the two guides: parity, links, documented flags
 python3 tools/bench.py installed  # open latency of the installed sponux
 python3 tools/visual.py /tmp/shots  # screenshot the real window
+python3 tools/rankstats.py        # whether the ranking still tells apps apart
 ```
 
 ## Layout
