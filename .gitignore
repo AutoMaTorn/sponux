@@ -58,3 +58,6 @@ ROADMAP.md
 # the root on purpose: an unanchored pattern would also swallow anything named
 # shot-*.png under docs/images/, which is where the README's assets live.
 /shot-*.png
+
+
+CLAUDE.md

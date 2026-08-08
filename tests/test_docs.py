@@ -185,6 +185,21 @@ check("every file that spells the version out agrees with pyproject.toml",
 check("…and the manual page is one of the files checked",
       any("sponux.1" in rel for rel, _ in metadata._VERSION_IN), True)
 
+# metadata._VERSION_IN only covers files with one line to anchor a capture
+# group to (__init__.py, the man page). README and the guides spell the
+# version out many times over, in different filename shapes
+# (sponux_X.Y.Z-1_all.deb, sponux-X.Y.Z.tar.gz, sponux-X.Y.Z/bin/sponux, …),
+# so every occurrence is checked instead of just one. This is what let
+# README.md and both guides sit at 0.2.0 in their install examples while the
+# tree had already moved to 0.2.1.
+_version_re = re.compile(r"sponux[-_](\d+\.\d+\.\d+)")
+_versioned_docs = {f"README.{lang}": text for lang, text in readmes.items()}
+_versioned_docs.update({f"user-guide.{lang}": text for lang, text in texts.items()})
+for label, doc in _versioned_docs.items():
+    found = sorted(set(_version_re.findall(doc)))
+    check(f"{label}: every sponux-X.Y.Z it names is {metadata.VERSION}",
+          found, [metadata.VERSION])
+
 
 # ---- the commands the guides tell people to run exist --------------------
 
