@@ -523,6 +523,10 @@ STARTER_CONFIG = """\
 # clearly better text match still wins.
 # frecency = true
 # weight = 25
+# Opening a file counts the application that opened it. When that was a rule
+# rather than a choice, it counts for less: two automatic opens weigh as much
+# as one deliberate launch. 1.0 counts them alike, 0 stops counting them.
+# indirect = 0.5
 
 # ---------------------------------------------------------------------------
 # The window itself. Everything here applies the next time you open the
@@ -550,7 +554,7 @@ STARTER_CONFIG = """\
 # "<Shift><Alt>c", "F2". Check the spelling with `sponux --check`, which
 # reports anything it could not parse.
 #
-# Only these five are configurable. Typing, the arrow keys and Enter are what
+# Only these six are configurable. Typing, the arrow keys and Enter are what
 # make this a launcher rather than a keymap, and rebinding them is how you lock
 # yourself out. Escape always closes the window whatever `close` says, for the
 # same reason.
@@ -562,6 +566,7 @@ STARTER_CONFIG = """\
 # reveal = "<Ctrl>Return"      # open the folder containing the selected file
 # copy_path = "<Ctrl>c"        # copy the selected file's path
 # open_with = "<Shift>Return"  # choose an application for this file
+# forget = "<Shift>Delete"     # forget what the ranking learned about this
 # close = "Escape"             # hide the window
 # quit = "<Ctrl>q"             # stop the daemon
 """

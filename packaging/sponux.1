@@ -1,7 +1,7 @@
 '\" t
 .\" The line above is the preprocessor marker: this page has a .TS table, and
 .\" without it man does not run tbl and the KEYS section renders as garbage.
-.TH SPONUX 1 "2026-07-29" "sponux 0.2.1" "User Commands"
+.TH SPONUX 1 "2026-08-08" "sponux 0.2.3" "User Commands"
 .SH NAME
 sponux \- Spotlight-like launcher for applications, files and arithmetic
 .SH SYNOPSIS
@@ -68,6 +68,23 @@ The mime types are not guessable \(em GIO reports a
 .I .ts
 file as Qt Linguist \(em so this is the honest way to write a rule.
 .TP
+.BI \-\-forget " PATTERN"
+Forget what the ranking learned about everything matching
+.IR PATTERN :
+a bare word matches as a substring of the path or application id,
+while
+.B *
+and
+.B ?
+are used as written.
+.B \-\-forget \-\-all
+empties the history.
+Each removal is printed; none of it can be undone, and nothing but the
+history is touched.
+Inside the window,
+.B Shift+Delete
+does the same to the selected result.
+.TP
 .B \-\-check
 Check
 .IR config.toml :
@@ -94,6 +111,7 @@ Enter@launch, open, or copy a calculator result
 Ctrl+Enter@open the folder containing the selected file
 Ctrl+C@copy the selected file's path
 Shift+Enter@open with\[u2026], optionally remembering the choice
+Shift+Delete@forget what the ranking learned about the selection
 Escape@hide the window
 Ctrl+Q@quit the daemon
 .TE

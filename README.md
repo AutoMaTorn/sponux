@@ -77,14 +77,14 @@ and take focus. See [Wayland](docs/user-guide.en.md#when-something-is-wrong).
 **Debian / Ubuntu** — the package declares its dependencies itself:
 
 ```sh
-sudo apt install ./sponux_0.2.1-1_all.deb
+sudo apt install ./sponux_0.2.3-1_all.deb
 ```
 
 **Anywhere else** — there is nothing to install. Unpack it and run it:
 
 ```sh
-tar xf sponux-0.2.1.tar.gz -C ~/opt
-~/opt/sponux-0.2.1/bin/sponux
+tar xf sponux-0.2.3.tar.gz -C ~/opt
+~/opt/sponux-0.2.3/bin/sponux
 ```
 
 Or clone this repository and run `bin/sponux` out of it — same thing.
@@ -114,6 +114,7 @@ exec_always --no-startup-id sponux --daemon        # …and start it at login
 | Ctrl+Enter | open the folder containing the file |
 | Ctrl+C | copy the file's path |
 | Shift+Enter | open with… (and optionally remember it) |
+| Shift+Delete | forget what the ranking learned about the selection |
 | Esc | hide the window |
 | Ctrl+Q | quit the daemon |
 
@@ -137,9 +138,9 @@ sponux --reindex                     # rebuild the file index now
 ## Build the packages
 
 ```sh
-python3 tools/mkdeb.py         # dist/sponux_0.2.1-1_all.deb   (needs dpkg-deb)
-python3 tools/mktarball.py     # dist/sponux-0.2.1.tar.gz      (unpack and run)
-python3 tools/mkwheel.py       # dist/sponux-0.2.1-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.2.3-1_all.deb   (needs dpkg-deb)
+python3 tools/mktarball.py     # dist/sponux-0.2.3.tar.gz      (unpack and run)
+python3 tools/mkwheel.py       # dist/sponux-0.2.3-py3-none-any.whl
 ```
 
 Pure Python, so all three are architecture-independent, and all three read their
@@ -157,6 +158,7 @@ the unpacked tree both use `bin/sponux`, which talks to the daemon over D-Bus.
 ## Tests
 
 ```sh
+python3 tests/test_apps.py        # the application list, and how its cache goes stale
 python3 tests/test_placement.py   # multi-monitor placement, against fake monitors
 python3 tests/test_index.py       # index rules + live inotify updates
 python3 tests/test_config.py      # [open] rules, the config writer, dotfiles

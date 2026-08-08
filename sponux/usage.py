@@ -19,6 +19,7 @@ The rules it follows, in order of importance:
   does dictionary lookups, not queries.
 """
 
+import fnmatch
 import math
 import sqlite3
 import time
@@ -92,6 +93,21 @@ def _settings():
     )
 
 
+def indirect_weight() -> float:
+    """What one indirect open is worth, from `[rank] indirect`.
+
+    Read per call rather than cached because userconfig.settings() re-reads
+    config.toml on mtime, and this is on the open path, not the typing path.
+    """
+    section = userconfig.settings().get("rank")
+    if not isinstance(section, dict):
+        section = {}
+    value = section.get("indirect")
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0:
+        return float(value)
+    return config.FRECENCY_INDIRECT
+
+
 def _table():
     """The whole usage table, in memory. Loaded once, updated in place."""
     global _cache
@@ -107,20 +123,33 @@ def _table():
     return _cache
 
 
-def record(key: str, now: float = None):
-    """Count one use of `key`. Called when something is actually opened."""
-    if not key:
+def record(key: str, now: float = None, weight: float = 1.0):
+    """Count one use of `key`. Called when something is actually opened.
+
+    `weight` is how much of a use this one is worth: 1.0 for something the user
+    asked for by name, less for evidence that is weaker than that — see
+    record_opener(). Fractions need no migration. The column is declared
+    INTEGER, but SQLite's affinity keeps a value it cannot store losslessly as
+    a REAL, so 3 + 0.5 is 3.5 in the same column, and every reader of it already
+    treats hits as a number rather than a count of anything.
+    """
+    if not key or weight <= 0:
         return
     now = time.time() if now is None else now
     table = _table()
-    hits = table.get(key, (0, 0.0))[0] + 1
+    hits = table.get(key, (0, 0.0))[0] + weight
     table[key] = (hits, now)
     try:
         con = _connect()
+        # The increment comes from the row on disk (`hits + excluded.hits`),
+        # never from the number computed above: the cache can be a moment
+        # behind another process, and adding to a stale total would quietly
+        # overwrite that process's uses.
         con.execute(
             """INSERT INTO usage(key, hits, last) VALUES(?, ?, ?)
-               ON CONFLICT(key) DO UPDATE SET hits = hits + 1, last = excluded.last""",
-            (key, hits, now),
+               ON CONFLICT(key) DO UPDATE SET hits = hits + excluded.hits,
+                                              last = excluded.last""",
+            (key, weight, now),
         )
         con.commit()
         if len(table) > config.MAX_USAGE_ENTRIES:
@@ -129,7 +158,7 @@ def record(key: str, now: float = None):
         report.problem(f"cannot record use of {key}: {exc}")
 
 
-def record_app(app, now: float = None) -> str:
+def record_app(app, now: float = None, weight: float = 1.0) -> str:
     """Count one use of an application; return the key it was counted under.
 
     Called wherever an application actually runs something, not only where one
@@ -138,8 +167,26 @@ def record_app(app, now: float = None) -> str:
     it had never been touched.
     """
     key = key_for_appinfo(app)
-    record(key, now)
+    record(key, now, weight)
     return key
+
+
+def record_opener(app, now: float = None) -> str:
+    """Count one *indirect* use — an application that opened something because
+    a rule or the desktop said so, rather than because it was named.
+
+    Worth less than a deliberate launch, and the reason is not only saturation.
+    Choosing an application from the "open with" list, or typing its name and
+    pressing Enter, is someone saying which application they want. A `[open]`
+    rule firing says only that a file was opened; the application in it was
+    chosen once, months ago, and every file since has been repeating that one
+    decision. Weaker evidence, counted as less of it.
+
+    The size of "less" is `[rank] indirect`, 0.5 by default: two automatic
+    opens then weigh exactly as much as one deliberate launch, which is a
+    sentence anyone can check against the numbers.
+    """
+    return record_app(app, now, weight=indirect_weight())
 
 
 def opens() -> int:
@@ -249,8 +296,49 @@ def stats(key: str):
     return _table().get(key)
 
 
+def forget(key: str) -> bool:
+    """Drop one thing's history. True if there was anything to drop.
+
+    The database is written before the in-memory table, which is the opposite
+    order from record(). Deliberately: a failed write there would mean telling
+    someone their history is gone while it is still on disk waiting to come
+    back at the next restart, and that is not a lie they have any way to catch.
+    """
+    if not key or _table().get(key) is None:
+        return False
+    try:
+        con = _connect()
+        con.execute("DELETE FROM usage WHERE key = ?", (key,))
+        con.commit()
+    except sqlite3.Error as exc:
+        # Someone pressed a key and nothing happened: exactly what a
+        # notification is for.
+        report.problem(f"cannot forget {key}: {exc}", notify=True)
+        return False
+    _table().pop(key, None)
+    return True
+
+
+def matching(pattern: str):
+    """Remembered keys whose path or application id matches `pattern`.
+
+    A bare word matches as a substring — `--forget notes` is meant to reach
+    ~/work/notes.md, not something named exactly "notes" — while a pattern
+    with a wildcard in it is used as written, so `*.py` and `/tmp/*` mean what
+    they look like. fnmatch, the same glob dialect `[open.name]` already uses,
+    and matched against the path or id rather than the whole key so that a
+    pattern does not have to know about the `file:`/`app:` prefixes.
+    """
+    if not pattern:
+        return []
+    glob = pattern if any(c in pattern for c in "*?[") else f"*{pattern}*"
+    glob = glob.lower()
+    return sorted(key for key in _table()
+                  if fnmatch.fnmatch(key.partition(":")[2].lower(), glob))
+
+
 def forget_all():
-    """Drop everything. Only for tests; there is no UI for this."""
+    """Drop everything. Behind `--forget --all`, and used by the tests."""
     global _cache
     _cache = {}
     try:

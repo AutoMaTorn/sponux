@@ -5,6 +5,7 @@ import shlex
 
 from gi.repository import Gio, GLib
 
+from . import apps as apps_provider
 from .base import Result, fuzzy_score
 from .. import config, indexer, report, usage, userconfig
 
@@ -42,12 +43,16 @@ def _open(path: str, is_dir: bool = False):
     search too. Counted here rather than in the window, which counts the file:
     this is the only place that knows which application it turned out to be.
     Both calls happen after the window is hidden, off the typing path.
+
+    Counted through record_opener(), which is worth less than a launch by name:
+    nobody named this application, a rule did, and the rule is one old decision
+    being replayed by every file since.
     """
     argv = userconfig.opener_command(path, is_dir)
     if argv and _spawn(argv):
         app = app_for_command(argv[0])
         if app is not None:
-            usage.record_app(app)
+            usage.record_opener(app)
         return
     try:
         uri = GLib.filename_to_uri(path, None)
@@ -56,7 +61,7 @@ def _open(path: str, is_dir: bool = False):
         return
     default = Gio.AppInfo.get_default_for_type(content_type(path, is_dir), False)
     if default is not None:
-        usage.record_app(default)
+        usage.record_opener(default)
 
 
 def _spawn(argv) -> bool:
@@ -110,8 +115,7 @@ def apps_for(path: str, is_dir: bool = False):
 
     seen = {a.get_id() for a in registered}
     others = sorted(
-        (a for a in Gio.AppInfo.get_all()
-         if a.should_show() and a.get_id() not in seen),
+        (a for a in apps_provider.installed() if a.get_id() not in seen),
         key=lambda a: (a.get_display_name() or "").lower(),
     )
     # What has been chosen here before comes first, across both groups; the
@@ -157,7 +161,7 @@ def app_for_command(program: str, apps=None):
     if not name:
         return None
     if apps is None:
-        apps = Gio.AppInfo.get_all()
+        apps = apps_provider.installed()
     matches = [a for a in apps if a.should_show()
                and os.path.basename(a.get_executable() or "") == name]
     if len(matches) == 1:

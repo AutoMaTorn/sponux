@@ -136,6 +136,10 @@ KEYS = {
     "reveal": "<Ctrl>Return",       # open the folder containing the file
     "copy_path": "<Ctrl>c",         # copy the selected file's path
     "open_with": "<Shift>Return",   # choose an application for this file
+    # Forget what the ranking learned about the selected result. Shift+Delete
+    # because that is what browsers have bound to "drop this suggestion from
+    # my history" for twenty years, and this is the same gesture.
+    "forget": "<Shift>Delete",
     "close": "Escape",              # hide the window
     "quit": "<Ctrl>q",              # stop the daemon
 }
@@ -146,6 +150,14 @@ KEYS = {
 # settle near-ties and lose to a clearly better match. See usage.py.
 FRECENCY = True
 FRECENCY_WEIGHT = 25.0
+
+# What one *indirect* open is worth against a deliberate one: an application
+# credited because an [open] rule or the desktop default ran it, rather than
+# because someone named it. Half, so two automatic opens weigh as much as one
+# deliberate launch — the rule fired because of a decision made once, and every
+# file since has been repeating it. 1.0 counts them alike; 0 stops counting
+# them. See usage.record_opener().
+FRECENCY_INDIRECT = 0.5
 
 # Entries kept in the usage database; the least recently used go first.
 MAX_USAGE_ENTRIES = 5000

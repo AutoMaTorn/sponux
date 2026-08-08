@@ -152,11 +152,16 @@ class SponuxWindow(Gtk.ApplicationWindow):
         self._mode = "search"
         self._open_with = None
         self._suspended = None   # the search to come back to from open-with
+        # A one-off message shown in place of the hints — see _forget_selected().
+        # Cleared by typing or by moving the selection, i.e. by the next thing
+        # the user does, so it never lingers into a search it does not describe.
+        self._flash = None
         self._show_results(False)
 
     # ---- search -------------------------------------------------------
 
     def _on_changed(self, _entry):
+        self._flash = None
         if self._debounce_id:
             GLib.source_remove(self._debounce_id)
         self._debounce_id = GLib.timeout_add(self.settings.debounce,
@@ -270,6 +275,10 @@ class SponuxWindow(Gtk.ApplicationWindow):
             self.hints.set_text(_HINTS_OPEN_WITH)
             self.hints.set_visible(True)
             return
+        if self._flash:
+            self.hints.set_text(self._flash)
+            self.hints.set_visible(True)
+            return
         # Nothing typed yet: teach the prefixes instead of the modifiers, since
         # there is nothing selected for a modifier to act on.
         if not self.entry.get_text():
@@ -285,7 +294,7 @@ class SponuxWindow(Gtk.ApplicationWindow):
         if self._kind_filter:
             parts.append(_KIND_ONLY[self._kind_filter])
         if result is not None:
-            parts.append(self._hints_for(result.kind))
+            parts.append(self._hints_for(result))
         self.hints.set_text("   ·   ".join(parts))
 
     def _label(self, action):
@@ -293,17 +302,24 @@ class SponuxWindow(Gtk.ApplicationWindow):
         keyval, mods = self.settings.keys[action]
         return Gtk.accelerator_get_label(keyval, mods)
 
-    def _hints_for(self, kind):
-        """The keys that apply to this kind of result, as currently bound."""
+    def _hints_for(self, result):
+        """The keys that apply to this result, as currently bound.
+
+        The forget key is offered only where there is a history to forget. The
+        line is already full for a file, and a key advertised where it would do
+        nothing is worse than one nobody mentioned.
+        """
         close = f"{self._label('close')} close"
-        if kind == "file":
+        forget = (f"   {self._label('forget')} forget"
+                  if usage.stats(result.usage_key) else "")
+        if result.kind == "file":
             # Enter is not configurable, so it stays the symbol it always was.
             return (f"↩ open   {self._label('reveal')} containing folder   "
                     f"{self._label('copy_path')} copy path   "
-                    f"{self._label('open_with')} open with…")
-        if kind == "calc":
+                    f"{self._label('open_with')} open with…{forget}")
+        if result.kind == "calc":
             return f"↩ copy result   {close}"
-        return f"↩ run   {close}"
+        return f"↩ run   {close}{forget}"
 
     # ---- open with ----------------------------------------------------
 
@@ -393,6 +409,10 @@ class SponuxWindow(Gtk.ApplicationWindow):
         # these with" the launcher ever gets; before it was counted, opening
         # every project folder with an editor left that editor ranked as though
         # it had never been used.
+        #
+        # Full credit, unlike the same application opening a file because an
+        # [open] rule said so (usage.record_opener()). Someone is choosing it
+        # from a list here, which is the same act as typing its name.
         if files_provider.open_with(app, result.path):
             usage.record_app(app)
         if not remember:
@@ -450,7 +470,28 @@ class SponuxWindow(Gtk.ApplicationWindow):
             return False
         return bool(self._enter_open_with(result))
 
+    def _forget_selected(self):
+        """Drop the ranking's memory of the selected result.
+
+        The search is re-run rather than the row edited in place: without its
+        bonus the result may belong somewhere else in the list, and seeing it
+        fall is the only proof that anything happened. The message says so for
+        the case where it does not move.
+        """
+        result = self._selected()
+        if result is None or not result.usage_key:
+            return False
+        # Swallowed whether or not there was anything to forget. With a result
+        # selected this keypress meant "forget it", and Shift+Delete has long
+        # been bound to cut in text entries — falling through would quietly
+        # take a bite out of the query instead of doing nothing.
+        if usage.forget(result.usage_key):
+            self._flash = f"forgot the history of {result.title}"
+            self._do_search()
+        return True
+
     def _move_selection(self, delta):
+        self._flash = None
         n = len(self._results)
         if n == 0:
             return
@@ -522,6 +563,9 @@ class SponuxWindow(Gtk.ApplicationWindow):
                 return True
         if self._matches("open_with", keyvals, mods):
             if self._open_with_selected():
+                return True
+        if self._matches("forget", keyvals, mods):
+            if self._forget_selected():
                 return True
 
         # Not configurable: these are what make it a launcher rather than a

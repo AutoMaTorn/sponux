@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sponux"
-version = "0.2.1"
+version = "0.2.3"
 description = "Spotlight-like launcher for Linux: apps, files and a calculator"
 readme = "README.md"
 # 3.11 is the floor because userconfig.py parses config.toml with tomllib,

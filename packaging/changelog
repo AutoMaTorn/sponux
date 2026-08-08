@@ -1,3 +1,28 @@
+sponux (0.2.3-1) unstable; urgency=medium
+
+  * Opening something with an application counts as using that application.
+    The editor you open every project folder with now rises in the application
+    search and comes back at the top of the next "open with" list, instead of
+    wherever the desktop filed it. Counted the same way for a Shift+Enter
+    choice, for an [open] rule and for the desktop default.
+  * Typing is faster: the installed-application list is cached instead of being
+    rebuilt from GIO on every keystroke, which measured 28.5 ms per keystroke
+    against 1.9 ms now, and a keystroke overall about 50 ms against 25 ms. The
+    cache is dropped when an application directory changes and when a .desktop
+    file is edited, so an application installed while sponux is running is
+    still found without restarting it.
+  * An application credited because an [open] rule or the desktop default ran
+    it counts for half a use, against a whole one for an application named or
+    chosen from the "open with" list: the rule was decided once and every file
+    since repeats it. [rank] indirect tunes this; 1.0 counts them alike.
+  * What the ranking has learned can be forgotten: Shift+Delete on the selected
+    result, or --forget PATTERN and --forget --all from a terminal. Until now
+    the only way out of one wrong entry was deleting the whole history.
+  * --which also reports which application would open a path, and what that
+    application's own history is worth to its rank.
+
+ -- automatorn <automatorn@gmail.com>  Sat, 08 Aug 2026 22:10:32 +0700
+
 sponux (0.2.1-1) unstable; urgency=medium
 
   * New application icon, and it ships as a vector master besides the fixed

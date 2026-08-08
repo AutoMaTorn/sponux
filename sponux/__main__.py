@@ -51,8 +51,55 @@ def _print_history(label: str, key: str):
         return
     hits, last = seen
     when = datetime.datetime.fromtimestamp(last).strftime("%Y-%m-%d %H:%M")
-    print(f"  {label:<13} {hits}x, last {when} "
+    # :g rather than the raw number — an application credited half a use at a
+    # time has a fractional count, and "3.5x" reads better than "3.5000000001x".
+    print(f"  {label:<13} {hits:g}x, last {when} "
           f"(+{usage.bonus(key):.1f} to its rank)")
+
+
+def _forget(argv):
+    """Make sponux forget what it learned about something.
+
+    Ranking history is the one piece of state there was no way out of. A file
+    opened once with the wrong application, a directory visited by mistake, a
+    project that has since been deleted — all of it kept being offered, and the
+    only remedy was deleting usage.db whole, which throws away everything the
+    launcher had right along with the one entry that was wrong.
+
+    Every removal is printed, because this cannot be undone and the output is
+    the only record of what went.
+    """
+    from . import usage
+
+    patterns = [a for a in argv[1:] if not a.startswith("--")]
+    if "--all" in argv:
+        total = len(usage._table())
+        usage.forget_all()
+        print(f"forgot everything: {total} entr{'y' if total == 1 else 'ies'}")
+        return 0
+    if not patterns:
+        print("usage: sponux --forget PATTERN [PATTERN…]   (or --forget --all)\n"
+              "       a bare word matches as a substring; * and ? work as usual",
+              file=sys.stderr)
+        return 2
+
+    gone = 0
+    for pattern in patterns:
+        keys = usage.matching(pattern)
+        if not keys:
+            print(f"nothing remembered matches {pattern!r}")
+            continue
+        for key in keys:
+            seen = usage.stats(key)
+            if not usage.forget(key):
+                continue
+            kind, _, name = key.partition(":")
+            print(f"forgot {kind} {name}  ({seen[0]:g}x)")
+            gone += 1
+    if gone:
+        print(f"\n{gone} entr{'y' if gone == 1 else 'ies'} forgotten; "
+              "the ranking stops counting that from the next search")
+    return 0
 
 
 def _which(argv):
@@ -412,6 +459,10 @@ def _check_config():
     if enabled:
         print(f"  ok      frecency on, weight {weight:g}, "
               f"{len(usage._table())} thing(s) remembered in {config.USAGE_DB}")
+        indirect = usage.indirect_weight()
+        print(f"  {'ok' if indirect else 'note':<7} an application opened by a "
+              f"rule counts {indirect:g} against a launch by name"
+              + ("" if indirect else " — i.e. not at all"))
     else:
         print("  note    frecency off; results are ranked on the query alone")
 
@@ -551,6 +602,8 @@ def main():
         return _write_config("--force" in sys.argv)
     if "--which" in sys.argv:
         return _which(sys.argv[sys.argv.index("--which"):])
+    if "--forget" in sys.argv:
+        return _forget(sys.argv[sys.argv.index("--forget"):])
     if "--check" in sys.argv:
         return _check()
     from .app import main as app_main

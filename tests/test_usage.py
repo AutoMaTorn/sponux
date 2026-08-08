@@ -246,6 +246,92 @@ check("two visible entries for one binary credit neither",
 check("...unless one of them is the entry named after the command",
       files_provider.app_for_command("code", [rival, code]), code)
 
+# ---- indirect opens count for less ------------------------------------
+#
+# An application credited because an [open] rule ran it was not chosen by
+# anyone: the rule was, once, and every file since replays that decision. Half
+# a use by default, which is a claim with an arithmetic consequence — two
+# automatic opens have to weigh exactly as much as one deliberate launch.
+
+usage.forget_all()
+usage.record("app:launched", now=NOW)
+usage.record("app:opener", now=NOW, weight=0.5)
+usage.record("app:opener", now=NOW, weight=0.5)
+check("two half uses land on the same count as one whole one",
+      usage.stats("app:opener")[0], usage.stats("app:launched")[0])
+check("...and therefore on the same bonus",
+      usage.bonus("app:opener", now=NOW), usage.bonus("app:launched", now=NOW))
+
+usage.record("app:opener", now=NOW, weight=0.5)
+check("a fraction is stored, not rounded away",
+      usage.stats("app:opener")[0], 1.5)
+usage._cache = None      # INTEGER affinity must not have truncated it on disk
+check("...and survives the trip through an INTEGER column",
+      usage.stats("app:opener")[0], 1.5)
+
+check("a use worth nothing is not recorded at all",
+      usage.record("app:free", now=NOW, weight=0) or usage.stats("app:free"),
+      None)
+
+real_settings = userconfig.settings
+userconfig.settings = lambda: {}
+check("half a use is the default", usage.indirect_weight(), 0.5)
+userconfig.settings = lambda: {"rank": {"indirect": 1}}
+check("[rank] indirect = 1 counts an opener like a launch",
+      usage.indirect_weight(), 1.0)
+userconfig.settings = lambda: {"rank": {"indirect": 0}}
+check("...and 0 stops counting openers", usage.indirect_weight(), 0.0)
+userconfig.settings = lambda: {"rank": {"indirect": -3}}
+check("a negative weight is refused, not obeyed",
+      usage.indirect_weight(), config.FRECENCY_INDIRECT)
+userconfig.settings = lambda: {"rank": {"indirect": True}}
+check("...and so is a boolean, which is a number in Python but not here",
+      usage.indirect_weight(), config.FRECENCY_INDIRECT)
+userconfig.settings = real_settings
+
+# ---- forgetting -------------------------------------------------------
+#
+# The one piece of state there used to be no way out of: a file opened once
+# with the wrong application kept being offered, and the only remedy was
+# deleting usage.db whole.
+
+usage.forget_all()
+for key, count in (("file:/home/u/work/notes.md", 5), ("file:/home/u/a/main.py", 3),
+                   ("file:/home/u/b/util.py", 2), ("app:code.desktop", 9)):
+    for _ in range(count):
+        usage.record(key, now=NOW)
+
+check("forgetting something remembered says so",
+      usage.forget("file:/home/u/a/main.py"), True)
+check("...and it is gone from the ranking",
+      usage.bonus("file:/home/u/a/main.py", now=NOW), 0.0)
+check("forgetting it twice is not an error, just nothing to do",
+      usage.forget("file:/home/u/a/main.py"), False)
+check("forgetting something never seen is the same",
+      usage.forget("file:/nowhere"), False)
+check("the rest is untouched", usage.stats("file:/home/u/work/notes.md")[0], 5)
+
+usage._cache = None      # the delete has to have reached the disk, not the cache
+check("and it stays forgotten across a restart",
+      usage.stats("file:/home/u/a/main.py"), None)
+
+check("a bare word matches as a substring, which is how people type it",
+      usage.matching("notes"), ["file:/home/u/work/notes.md"])
+check("a wildcard is used as written",
+      usage.matching("*.py"), ["file:/home/u/b/util.py"])
+check("patterns do not have to know about the file:/app: prefixes",
+      usage.matching("code"), ["app:code.desktop"])
+check("...and match the path, so a directory reaches what is under it",
+      usage.matching("/home/u/*"),
+      ["file:/home/u/b/util.py", "file:/home/u/work/notes.md"])
+check("matching is case-insensitive", usage.matching("NOTES"),
+      ["file:/home/u/work/notes.md"])
+check("an empty pattern matches nothing rather than everything",
+      usage.matching(""), [])
+
+usage.forget_all()
+check("--forget --all leaves nothing", usage._table(), {})
+
 # ---- the first-run counter, which shares this state directory -------------
 #
 # It answers one question — does this install look untouched? — and the two

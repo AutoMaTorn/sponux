@@ -101,6 +101,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.2.3" date="2026-08-08">
+      <description>
+        <p>Applications are ranked by what you open with them, not only by what you launch by name, and the "open with" list offers your earlier choices first. What the ranking has learned can now be forgotten, with Shift+Delete in the window or --forget from a terminal.</p>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-07-29">
       <description>
         <p>A new application icon, shipped as a vector master alongside the fixed hicolor sizes, so a HiDPI panel no longer scales the 128px one up.</p>

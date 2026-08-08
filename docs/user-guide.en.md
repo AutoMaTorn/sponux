@@ -32,7 +32,7 @@ library.
 **Debian / Ubuntu.** The package declares those dependencies, so this is all:
 
 ```sh
-sudo apt install ./sponux_0.2.1-1_all.deb
+sudo apt install ./sponux_0.2.3-1_all.deb
 ```
 
 **Anywhere else** there is nothing to install. Install the two system packages,
@@ -40,8 +40,8 @@ unpack sponux wherever you keep such things, and run it from there:
 
 ```sh
 sudo pacman -S python-gobject gtk4        # Arch; use your own package manager
-tar xf sponux-0.2.1.tar.gz -C ~/opt
-~/opt/sponux-0.2.1/bin/sponux
+tar xf sponux-0.2.3.tar.gz -C ~/opt
+~/opt/sponux-0.2.3/bin/sponux
 ```
 
 Cloning the repository instead works the same way, if you would rather track it
@@ -49,12 +49,12 @@ with git.
 
 `bin/sponux` finds the package next to itself, so this needs no root, no
 `PATH` changes and no uninstall procedure — to remove it, delete the directory.
-Bind your hotkey to the full path (`~/opt/sponux-0.2.1/bin/sponux`) and
+Bind your hotkey to the full path (`~/opt/sponux-0.2.3/bin/sponux`) and
 everything in this guide works the same.
 
 The archive holds only what is needed to run sponux, so there is no man page on
 your manpath — read it in place with
-`man -l ~/opt/sponux-0.2.1/packaging/sponux.1`.
+`man -l ~/opt/sponux-0.2.3/packaging/sponux.1`.
 
 It is the same wrapper the `.deb` installs as `/usr/bin/sponux`; the only
 difference is where it finds the package.
@@ -157,6 +157,7 @@ on the session bus and exits if it is.
 | `Ctrl+Enter` | open the folder containing the selected file |
 | `Ctrl+C` | copy the selected file's path |
 | `Shift+Enter` | open with… (and optionally remember the choice) |
+| `Shift+Delete` | forget what the ranking learned about the selection |
 | `Esc` | hide the window |
 | `Ctrl+Q` | quit the daemon |
 
@@ -324,6 +325,7 @@ sponux counts what you open and when, and nudges those results up.
 [rank]
 frecency = true      # rank what you open above what merely matches
 weight = 25          # the most a result can gain from its history
+indirect = 0.5       # what an application opened by a rule counts for
 ```
 
 Two files called `config` no longer tie — the one you edited this morning comes
@@ -342,8 +344,36 @@ project folder with rises in the app search, and comes back at the top of the
 next `Shift+Enter` list instead of wherever the desktop filed it. Applications
 you have never chosen keep their usual order.
 
+Not everything counts alike. Naming an application, or picking one from the
+`Shift+Enter` list, is you saying which one you want; an `[open]` rule firing
+says only that a file was opened — the application in it was chosen once, and
+every file since has been repeating that one decision. So an application
+credited by a rule or by the desktop default counts for half a use, and two
+automatic opens weigh exactly as much as one deliberate launch. `indirect = 1`
+counts them alike; `indirect = 0` stops counting them at all.
+
 `sponux --which PATH` reports what a file has earned, which application would
 open it, and what that application has earned.
+
+### Forgetting
+
+A file opened once with the wrong application, a folder visited by mistake, a
+project since deleted — the launcher goes on offering them. `Shift+Delete` on
+the selected result forgets it: the history goes, the result stays, and the
+list re-sorts underneath you. The key is only offered on results that have a
+history to forget.
+
+From a terminal, by pattern:
+
+```sh
+sponux --forget notes        # anything whose path or app id contains "notes"
+sponux --forget '*.py'       # a wildcard is used as written
+sponux --forget --all        # start over
+```
+
+Every removal is printed, because none of it can be undone. Nothing else is
+touched — forgetting a file does not unset the rule that opens it, and
+forgetting an application does not uninstall anything.
 
 Set `frecency = false` to rank on the query alone.
 
@@ -377,6 +407,7 @@ so only Escape and the hotkey dismiss it.
 reveal = "<Ctrl>Return"      # open the folder containing the selected file
 copy_path = "<Ctrl>c"        # copy the selected file's path
 open_with = "<Shift>Return"  # choose an application for this file
+forget = "<Shift>Delete"     # forget what the ranking learned about this
 close = "Escape"             # hide the window
 quit = "<Ctrl>q"             # stop the daemon
 ```
@@ -569,7 +600,7 @@ Without it, positioning is left to the compositor. Everything else works.
 
 ```sh
 sudo apt remove sponux           # if you installed the .deb
-rm -rf ~/opt/sponux-0.2.1        # if you unpacked the archive
+rm -rf ~/opt/sponux-0.2.3        # if you unpacked the archive
 ```
 
 Neither touches your configuration, index or history. To remove those too:
@@ -603,9 +634,9 @@ builders are plain standard-library Python.
 ```sh
 git clone https://github.com/AutoMaTorn/sponux && cd sponux
 
-python3 tools/mkdeb.py         # dist/sponux_0.2.1-1_all.deb
-python3 tools/mktarball.py     # dist/sponux-0.2.1.tar.gz
-python3 tools/mkwheel.py       # dist/sponux-0.2.1-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.2.3-1_all.deb
+python3 tools/mktarball.py     # dist/sponux-0.2.3.tar.gz
+python3 tools/mkwheel.py       # dist/sponux-0.2.3-py3-none-any.whl
 ```
 
 | Which one | For |
@@ -631,7 +662,7 @@ byte-identical files. That means you can check an artifact somebody handed you
 against one you built yourself:
 
 ```sh
-sha256sum dist/sponux-0.2.1.tar.gz
+sha256sum dist/sponux-0.2.3.tar.gz
 ```
 
 **Changing the version** means editing three files: `pyproject.toml`,

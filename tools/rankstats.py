@@ -16,7 +16,8 @@ been recorded can be replayed from data already on disk.
 What comes out:
 
   now         the application half of the table as it stands
-  projected   the same, plus every file open credited to its opener
+  projected   the same, plus every file open credited to its opener at
+              whatever `[rank] indirect` says one is worth
   collisions  queries where the top two applications have both topped the
               curve out *and* carry the same bonus — the only place
               saturation can actually cost anything
@@ -230,12 +231,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--db", type=pathlib.Path, default=config.USAGE_DB,
                         help=f"usage database to read (default {config.USAGE_DB})")
-    parser.add_argument("--indirect", type=float, default=1.0, metavar="W",
+    parser.add_argument("--indirect", type=float, default=None, metavar="W",
                         help="what one file open is worth to the application "
-                             "that opened it (default 1.0, as shipped; try 0.5 "
-                             "to see whether fractional credit restores the "
-                             "spread)")
+                             "that opened it; defaults to the [rank] indirect "
+                             "in force, so the projection describes the "
+                             "ranking that is actually running. Pass 1.0 to "
+                             "see what counting them alike would do")
     args = parser.parse_args()
+    if args.indirect is None:
+        args.indirect = usage.indirect_weight()
 
     enabled, weight = usage._settings()
     if not enabled:
