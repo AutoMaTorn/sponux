@@ -1,3 +1,20 @@
+sponux (0.3.0-1) unstable; urgency=medium
+
+  * Searching the web. A row under the local results offers to take the query
+    to your browser, and a query that names a URL ("github.com",
+    "https://…") offers to open it instead. It scores below every local
+    result, so it surfaces when nothing better was found rather than pushing
+    anything out; "?query" asks for it outright.
+  * The engine is configurable in [web], with extra ones reachable by prefix:
+    "g:cats" searches whatever [web.engines] calls g. DuckDuckGo by default.
+  * Nothing is sent anywhere until Enter is pressed. There are deliberately no
+    live suggestions from a search engine: those would mean an HTTP request per
+    keystroke, and every letter typed leaving the machine before anyone decided
+    to search.
+  * --check reports the engines and which browser https:// links open in.
+
+ -- automatorn <automatorn@gmail.com>  Sat, 08 Aug 2026 23:40:00 +0700
+
 sponux (0.2.3-1) unstable; urgency=medium
 
   * Opening something with an application counts as using that application.

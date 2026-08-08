@@ -1,9 +1,9 @@
 '\" t
 .\" The line above is the preprocessor marker: this page has a .TS table, and
 .\" without it man does not run tbl and the KEYS section renders as garbage.
-.TH SPONUX 1 "2026-08-08" "sponux 0.2.3" "User Commands"
+.TH SPONUX 1 "2026-08-08" "sponux 0.3.0" "User Commands"
 .SH NAME
-sponux \- Spotlight-like launcher for applications, files and arithmetic
+sponux \- Spotlight-like launcher for applications, files, the web and arithmetic
 .SH SYNOPSIS
 .B sponux
 .RI [ OPTION ]
@@ -12,6 +12,8 @@ sponux \- Spotlight-like launcher for applications, files and arithmetic
 is a keyboard launcher for X11.
 It searches installed applications, a self-maintained index of filenames under
 your home directory, and evaluates arithmetic expressions.
+It also offers to hand the query to your browser \(em a row under the local
+results, and nothing is sent anywhere until you press Enter.
 .PP
 It runs as a single-instance resident daemon.
 The first call starts it and shows the window; every later call toggles that
@@ -105,7 +107,7 @@ which is where anything that went wrong while running was recorded.
 .TS
 tab(@);
 l l.
-Type@search applications, files and arithmetic
+Type@search applications, files, the web and arithmetic
 Up / Down@move the selection
 Enter@launch, open, or copy a calculator result
 Ctrl+Enter@open the folder containing the selected file
@@ -117,7 +119,7 @@ Ctrl+Q@quit the daemon
 .TE
 .PP
 The keys that apply to the selected result are shown under the results.
-The four modifier actions and
+The modifier actions and
 .B Ctrl+Q
 can be rebound in
 .BR [keys] ;
@@ -136,6 +138,7 @@ l l.
 \fBf:\fP \fBfile:\fP@files only
 \fBa:\fP \fBapp:\fP@applications only
 \fBc:\fP \fB=\fP@the calculator only, as in \fB=1/7\fP
+\fB?\fP \fBweb:\fP@the web only, as in \fB?how to exit vim\fP
 \fB/\fP\[u2026] \fB~/\fP\[u2026]@that path, and completions of its last component
 .TE
 .PP
@@ -170,9 +173,17 @@ sets the card's width, how many results it shows,
 .B position
 (\fBtop\fP or \fBcenter\fP), whether losing focus dismisses it, and the typing
 debounce.
+.B [web]
+chooses the search engine and adds more of them under prefixes of your own, so
+that
+.B g:cats
+searches whatever
+.B [web.engines]
+calls
+.BR g .
 .B [keys]
-rebinds five actions \(em
-.BR reveal ", " copy_path ", " open_with ", " close " and " quit
+rebinds six actions \(em
+.BR reveal ", " copy_path ", " open_with ", " forget ", " close " and " quit
 \(em in GTK accelerator syntax, the same as i3's
 .BR bindsym :
 .BR "<Ctrl>Return" ", " "<Shift><Alt>c" ", " F2 .

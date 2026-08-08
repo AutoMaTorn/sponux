@@ -1,6 +1,6 @@
 # sponux — user guide
 
-A keyboard launcher for Linux: applications, files and arithmetic in one window.
+A keyboard launcher for Linux: applications, files, the web and arithmetic in one window.
 Press a key, type a few letters, press Enter.
 
 Русская версия: [user-guide.ru.md](user-guide.ru.md)
@@ -12,14 +12,15 @@ Press a key, type a few letters, press Enter.
 5. [Using it](#using-it)
 6. [Opening files your way](#opening-files-your-way)
 7. [What the file search can find](#what-the-file-search-can-find)
-8. [Ranking: what you use comes first](#ranking-what-you-use-comes-first)
-9. [The window, and the keys](#the-window-and-the-keys)
-10. [Appearance](#appearance)
-11. [Keeping your config in a dotfiles repository](#keeping-your-config-in-a-dotfiles-repository)
-12. [When something is wrong](#when-something-is-wrong)
-13. [Files sponux writes](#files-sponux-writes)
-14. [Uninstalling](#uninstalling)
-15. [Building from source](#building-from-source)
+8. [Searching the web](#searching-the-web)
+9. [Ranking: what you use comes first](#ranking-what-you-use-comes-first)
+10. [The window, and the keys](#the-window-and-the-keys)
+11. [Appearance](#appearance)
+12. [Keeping your config in a dotfiles repository](#keeping-your-config-in-a-dotfiles-repository)
+13. [When something is wrong](#when-something-is-wrong)
+14. [Files sponux writes](#files-sponux-writes)
+15. [Uninstalling](#uninstalling)
+16. [Building from source](#building-from-source)
 
 ---
 
@@ -32,7 +33,7 @@ library.
 **Debian / Ubuntu.** The package declares those dependencies, so this is all:
 
 ```sh
-sudo apt install ./sponux_0.2.3-1_all.deb
+sudo apt install ./sponux_0.3.0-1_all.deb
 ```
 
 **Anywhere else** there is nothing to install. Install the two system packages,
@@ -40,8 +41,8 @@ unpack sponux wherever you keep such things, and run it from there:
 
 ```sh
 sudo pacman -S python-gobject gtk4        # Arch; use your own package manager
-tar xf sponux-0.2.3.tar.gz -C ~/opt
-~/opt/sponux-0.2.3/bin/sponux
+tar xf sponux-0.3.0.tar.gz -C ~/opt
+~/opt/sponux-0.3.0/bin/sponux
 ```
 
 Cloning the repository instead works the same way, if you would rather track it
@@ -49,12 +50,12 @@ with git.
 
 `bin/sponux` finds the package next to itself, so this needs no root, no
 `PATH` changes and no uninstall procedure — to remove it, delete the directory.
-Bind your hotkey to the full path (`~/opt/sponux-0.2.3/bin/sponux`) and
+Bind your hotkey to the full path (`~/opt/sponux-0.3.0/bin/sponux`) and
 everything in this guide works the same.
 
 The archive holds only what is needed to run sponux, so there is no man page on
 your manpath — read it in place with
-`man -l ~/opt/sponux-0.2.3/packaging/sponux.1`.
+`man -l ~/opt/sponux-0.3.0/packaging/sponux.1`.
 
 It is the same wrapper the `.deb` installs as `/usr/bin/sponux`; the only
 difference is where it finds the package.
@@ -151,7 +152,7 @@ on the session bus and exits if it is.
 
 | Key | What it does |
 | --- | --- |
-| type | search applications, files and arithmetic |
+| type | search applications, files, the web and arithmetic |
 | ↑ / ↓ | move the selection |
 | `Enter` | launch, open, or copy a calculator result |
 | `Ctrl+Enter` | open the folder containing the selected file |
@@ -184,6 +185,7 @@ typing a path rather than searching:
 | `f:` `file:` | files only |
 | `a:` `app:` | applications only |
 | `c:` `=` | the calculator only — `=1/7` |
+| `?` `web:` | the web only — `?how to exit vim` |
 | `/…` `~/…` | that path, and completions of its last component |
 
 These are listed under the search field while it is empty and disappear as soon
@@ -316,6 +318,63 @@ load and nothing else would notice. If you want one now:
 ```sh
 sponux --reindex
 ```
+
+## Searching the web
+
+Under the local results there is one more row — *Search duckduckgo.com for …* —
+and `Enter` opens it in your browser.
+
+It scores below everything sponux can answer by itself, so it appears when the
+list has room, which in practice means when nothing local matched. Nothing is
+pushed aside to make space for it. Type `?` first when you do not want to wait
+for that: `?how to exit vim` searches the web and nothing else — and it is also
+how you reach the web rows when local results have filled the list, as
+`?github.com` does.
+
+**Nothing leaves your machine until you press `Enter`.** There are no live
+suggestions from the search engine, and that is a decision rather than a gap:
+suggestions mean an HTTP request per keystroke, so every letter you typed would
+leave the machine before you had decided to search for anything. sponux has no
+network code at all — the URL is built here and requested only when you
+activate the row.
+
+**A query that names an address offers to open it.** `github.com`,
+`https://github.com/AutoMaTorn/sponux` — the row *is* the URL, so you can read
+where `Enter` goes before pressing it. A word with a dot in it is ambiguous by
+nature: `notes.md` is both a file of yours and a valid domain. sponux does not
+try to be clever about telling them apart — the offer to open it as an address
+ranks below every file, so your file comes first and the address is the last
+row on the list.
+
+### Choosing an engine
+
+```toml
+[web]
+enabled = true
+search = "https://duckduckgo.com/?q={}"
+
+[web.engines]
+g = "https://www.google.com/search?q={}"
+w = "https://en.wikipedia.org/w/index.php?search={}"
+aw = "https://wiki.archlinux.org/index.php?search={}"
+```
+
+`{}` is where your query goes, encoded. A template without it gets the query
+appended, so `"https://duckduckgo.com/?q="` works as well — the same rule
+`[open]` follows with `{path}`.
+
+Everything under `[web.engines]` is reachable by prefix: `g:cats` searches
+Google, and because you named the engine outright that row goes to the top
+instead of waiting for a gap in the results. Avoid `f`, `a`, `c` and `web` as
+names — those prefixes already pick a kind of result, so an engine called one
+of them could never be typed; `sponux --check` says so if you try.
+
+`enabled = false` removes the row entirely.
+
+Which browser opens is your desktop's business, not sponux's: the URL goes to
+the default handler for `https://`, the same way a file goes to its default
+application. `sponux --check` names it, and says nothing opens links if
+nothing does.
 
 ## Ranking: what you use comes first
 
@@ -564,6 +623,10 @@ currently are.
 that matched. The usual cause is a mime pattern that does not apply — see the
 note about `text/*` above.
 
+**The web row does nothing.** Then nothing on this system claims
+`https://` links. `sponux --check` says so under `[web]`; set a default browser
+with `xdg-settings set default-web-browser firefox.desktop`, or install one.
+
 **My font setting is ignored.** The family name is almost certainly not what
 fontconfig calls it; check with `fc-match`. "JetBrains Mono" and "JetBrainsMono
 Nerd Font" are different names, and only the installed one resolves.
@@ -600,7 +663,7 @@ Without it, positioning is left to the compositor. Everything else works.
 
 ```sh
 sudo apt remove sponux           # if you installed the .deb
-rm -rf ~/opt/sponux-0.2.3        # if you unpacked the archive
+rm -rf ~/opt/sponux-0.3.0        # if you unpacked the archive
 ```
 
 Neither touches your configuration, index or history. To remove those too:
@@ -634,9 +697,9 @@ builders are plain standard-library Python.
 ```sh
 git clone https://github.com/AutoMaTorn/sponux && cd sponux
 
-python3 tools/mkdeb.py         # dist/sponux_0.2.3-1_all.deb
-python3 tools/mktarball.py     # dist/sponux-0.2.3.tar.gz
-python3 tools/mkwheel.py       # dist/sponux-0.2.3-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.3.0-1_all.deb
+python3 tools/mktarball.py     # dist/sponux-0.3.0.tar.gz
+python3 tools/mkwheel.py       # dist/sponux-0.3.0-py3-none-any.whl
 ```
 
 | Which one | For |
@@ -662,11 +725,13 @@ byte-identical files. That means you can check an artifact somebody handed you
 against one you built yourself:
 
 ```sh
-sha256sum dist/sponux-0.2.3.tar.gz
+sha256sum dist/sponux-0.3.0.tar.gz
 ```
 
-**Changing the version** means editing three files: `pyproject.toml`,
-`packaging/changelog` and `sponux/__init__.py`. The builders compare them and
-refuse to run when they disagree, so a half-finished bump cannot be shipped —
-but they cannot fill the other two in for you. The `.TH` line in
-`packaging/sponux.1` also names the version, and nothing checks that one.
+**Changing the version** means `pyproject.toml`, which is where the builders
+read it from, plus `packaging/changelog`, `sponux/__init__.py`, the `.TH` line
+in `packaging/sponux.1` and a `<release>` in
+`packaging/io.github.sponux.metainfo.xml`. The builders compare them and refuse
+to run when they disagree. The install examples in the README and in these
+guides spell it out too, and `python3 tests/test_docs.py` checks every one of
+them — so a half-finished bump fails a test run instead of shipping.

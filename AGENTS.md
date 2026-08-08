@@ -5,14 +5,16 @@ it is a map, not a log. Details and reasons live in the files it points to.
 
 ## What this is
 
-sponux: a Spotlight-like launcher for Linux — applications, files and a
-calculator in one GTK 4 window, toggled by a hotkey from a resident daemon.
+sponux: a Spotlight-like launcher for Linux — applications, files, a web
+search and a calculator in one GTK 4 window, toggled by a hotkey from a
+resident daemon.
 Python 3.11+, GTK 4 / PyGObject, SQLite (WAL) for the file index, ctypes/libX11
 for window placement. No third-party pip dependencies, deliberately.
 
 Working, published, installed on the maintainer's machine. Latest tag
-`v0.2.1`; the tree says **0.2.3**, unreleased and untagged (0.2.2 was skipped
-deliberately). Bound to `$mod+d` in the user's i3 config (not part of this repo).
+`v0.2.1`; the tree says **0.3.0**, unreleased and untagged (0.2.2 and 0.2.3
+were never tagged — 0.2.3's changelog entry is still there, under 0.3.0's).
+Bound to `$mod+d` in the user's i3 config (not part of this repo).
 
 ## Rules before you touch anything
 

@@ -101,6 +101,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.3.0" date="2026-08-08">
+      <description>
+        <p>Searching the web. A row under the local results hands the query to your browser, and a query that names a URL offers to open it; "?" searches the web outright. The engine is yours to choose in config.toml, and nothing leaves the machine until you press Enter — there are no live suggestions.</p>
+      </description>
+    </release>
     <release version="0.2.3" date="2026-08-08">
       <description>
         <p>Applications are ranked by what you open with them, not only by what you launch by name, and the "open with" list offers your earlier choices first. What the ranking has learned can now be forgotten, with Shift+Delete in the window or --forget from a terminal.</p>

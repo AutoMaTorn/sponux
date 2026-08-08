@@ -162,6 +162,19 @@ FRECENCY_INDIRECT = 0.5
 # Entries kept in the usage database; the least recently used go first.
 MAX_USAGE_ENTRIES = 5000
 
+# --- searching the web ------------------------------------------------
+#
+# One row offering to hand the query to a browser. Nothing is sent anywhere
+# until Enter is pressed: the row is built locally, and the request happens at
+# the moment it is activated. Live suggestions from a search engine would mean
+# an HTTP request per keystroke, i.e. every letter leaving the machine before
+# anyone decided to search, and that is deliberately not what this is.
+#
+# `{}` is where the query goes; a template without it gets the query appended,
+# the same rule userconfig.PATH_PLACEHOLDER follows for [open].
+WEB_SEARCH = True
+WEB_ENGINE = "https://duckduckgo.com/?q={}"
+
 # Bypass the window manager entirely (X11 override-redirect), the way rofi
 # does by default. The launcher then never becomes the WM's focused window,
 # so a tiling WM leaves its focus highlight on whatever you were working in.

@@ -466,6 +466,33 @@ def _check_config():
     else:
         print("  note    frecency off; results are ranked on the query alone")
 
+    from .app import _KIND_PREFIXES
+    from .providers import web as web_provider
+    web = userconfig.web_settings()
+    print("\n[web]")
+    if not web.enabled:
+        print("  note    off; nothing offers to take the query to a browser")
+    else:
+        print(f"  ok      search -> {web.template}")
+        # A prefix the window resolves to a kind of result never reaches the
+        # web provider, so an engine named after one is unreachable — and
+        # silently so, which is the only reason this is worth printing.
+        reserved = {p.rstrip(":") for p in _KIND_PREFIXES if p.endswith(":")}
+        for name, template in sorted(web.engines.items()):
+            if name in reserved:
+                print(f"  WARN    {name}: -> {template}, but {name}: already "
+                      "means a kind of result, so it is unreachable")
+                warnings += 1
+            else:
+                print(f"  ok      {name}: -> {template}")
+        browser = web_provider.default_browser()
+        if browser is None:
+            print("  ERROR   nothing is registered to open https:// links, so "
+                  "those rows would do nothing")
+            problems += 1
+        else:
+            print(f"  ok      https:// opens in {browser.get_display_name()}")
+
     # [window] and [keys] report their own problems while being read, so any
     # complaint has already been printed above by the time we get here; what is
     # left to show is what actually ended up in force.

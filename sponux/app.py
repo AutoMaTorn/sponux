@@ -11,10 +11,11 @@ from .providers import apps as apps_provider  # noqa: E402
 from .providers import base  # noqa: E402
 from .providers import calc as calc_provider  # noqa: E402
 from .providers import files as files_provider  # noqa: E402
+from .providers import web as web_provider  # noqa: E402
 
-PLACEHOLDER = "Search apps, files, or calculate…"
+PLACEHOLDER = "Search apps, files and the web, or calculate…"
 
-_KIND_LABEL = {"app": "App", "file": "File", "calc": "Calc",
+_KIND_LABEL = {"app": "App", "file": "File", "calc": "Calc", "web": "Web",
                "openwith": "Open with", "remember": "Rule"}
 
 
@@ -36,7 +37,7 @@ _HINTS_OPEN_WITH = "↩ open with it   type to filter   Esc back"
 # Shown while the query is empty, and gone the moment anything is typed. The
 # prefixes below are the only part of the interface that has to be known in
 # advance, so this is where they are taught.
-_HINTS_EMPTY = "f: files   a: apps   = calculate   / or ~/ a path"
+_HINTS_EMPTY = "f: files   a: apps   = calculate   ? the web   / or ~/ a path"
 # Shown instead, for the first few opens. Installing sponux and not binding a
 # key gives a launcher that looks broken — the desktop entry opens the window
 # and nothing in it says a hotkey is the whole point. See usage.record_open().
@@ -48,9 +49,13 @@ _KIND_PREFIXES = {
     "f:": "file", "file:": "file",
     "a:": "app", "app:": "app",
     "c:": "calc", "=": "calc",
+    # "?" rather than a letter: the web row is offered under every search
+    # anyway, so this prefix is for the times you want it *instead* of the
+    # local results, and it reads as a question.
+    "?": "web", "web:": "web",
 }
 _KIND_ONLY = {"file": "files only", "app": "apps only",
-              "calc": "calculator only"}
+              "calc": "calculator only", "web": "web only"}
 
 # Shown when the icon a result asked for is missing from the icon theme —
 # without this, GTK renders the "broken image" glyph.
@@ -59,6 +64,7 @@ _KIND_FALLBACK_ICON = {
     "openwith": "application-x-executable",
     "file": "text-x-generic",
     "calc": "accessories-calculator",
+    "web": "web-browser-symbolic",
     "remember": "checkbox-symbolic",
 }
 
@@ -187,6 +193,8 @@ class SponuxWindow(Gtk.ApplicationWindow):
             if kind in (None, "file"):
                 results += files_provider.search(query, limit)
                 results += files_provider.search_path(query, limit)
+            if kind in (None, "web"):
+                results += web_provider.search(query, limit)
             results.sort(key=lambda r: r.score, reverse=True)
             results = results[:limit]
         self._populate(results)
@@ -319,6 +327,8 @@ class SponuxWindow(Gtk.ApplicationWindow):
                     f"{self._label('open_with')} open with…{forget}")
         if result.kind == "calc":
             return f"↩ copy result   {close}"
+        if result.kind == "web":
+            return f"↩ open in your browser   {close}"
         return f"↩ run   {close}{forget}"
 
     # ---- open with ----------------------------------------------------

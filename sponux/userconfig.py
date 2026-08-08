@@ -266,6 +266,87 @@ def _complain(message: str):
     report.problem(f"{CONFIG_FILE}: {message}")
 
 
+@dataclass(frozen=True)
+class WebSettings:
+    """[web], resolved against the defaults in config.py."""
+    enabled: bool
+    template: str        # the engine used when no prefix names another
+    engines: dict        # prefix -> template, from [web.engines]
+
+
+# Where the query goes in an engine template. Appended when the template does
+# not name a spot, which is the rule PATH_PLACEHOLDER already follows in
+# [open] — the two are spelled differently because they substitute different
+# things, and `{}` is what every other launcher writes in a search URL.
+QUERY_PLACEHOLDER = "{}"
+
+# A template has to open in a browser, and the only way to be sure of that is
+# the scheme. Without this check a typo'd template would be handed to
+# launch_default_for_uri() and open whatever claims that scheme — a file
+# manager, a mail client, or nothing at all.
+_WEB_SCHEMES = ("http://", "https://")
+
+
+def web_settings() -> WebSettings:
+    """[web] and [web.engines], read fresh (settings() caches on mtime).
+
+    Called once per search rather than once per open, unlike window_settings():
+    what it returns decides a row that is offered while typing.
+    """
+    section = settings().get("web")
+    if not isinstance(section, dict):
+        if section is not None:
+            _complain(f"[web] must be a section, not {section!r}")
+        section = {}
+
+    enabled = section.get("enabled")
+    if enabled is not None and not isinstance(enabled, bool):
+        _complain(f"[web] enabled must be true or false, not {enabled!r}")
+        enabled = None
+
+    return WebSettings(
+        enabled=enabled if isinstance(enabled, bool) else config.WEB_SEARCH,
+        template=_engine_template("search", section.get("search"))
+        or config.WEB_ENGINE,
+        engines=_engines(section.get("engines")),
+    )
+
+
+def _engine_template(where: str, template):
+    """One search URL from the config, or None when it is unusable."""
+    if template is None:
+        return None
+    if not isinstance(template, str):
+        _complain(f"[web] {where} must be a URL string, not {template!r}")
+        return None
+    if not template.lower().startswith(_WEB_SCHEMES):
+        _complain(f"[web] {where} = {template!r} does not start with http:// "
+                  "or https://, so it would not open in a browser")
+        return None
+    return template
+
+
+def _engines(section) -> dict:
+    """[web.engines] as prefix -> template, with the unusable ones dropped."""
+    if section is None:
+        return {}
+    if not isinstance(section, dict):
+        _complain(f"[web.engines] must be a section, not {section!r}")
+        return {}
+    engines = {}
+    for name, template in section.items():
+        # The prefix is typed as "name:query", so a name carrying a colon or a
+        # space could never be typed back.
+        if not name or ":" in name or any(ch.isspace() for ch in name):
+            _complain(f"[web.engines] {name!r} cannot be typed as a prefix; "
+                      "use a short word with no spaces or colons")
+            continue
+        resolved = _engine_template(f"engines.{name}", template)
+        if resolved is not None:
+            engines[name.lower()] = resolved
+    return engines
+
+
 def opener_rules():
     """Every [open] rule as (rule, template), in resolution order.
 
@@ -527,6 +608,27 @@ STARTER_CONFIG = """\
 # rather than a choice, it counts for less: two automatic opens weigh as much
 # as one deliberate launch. 1.0 counts them alike, 0 stops counting them.
 # indirect = 0.5
+
+# ---------------------------------------------------------------------------
+# Searching the web. A row offering to take the query to your browser sits
+# under the local results, and surfaces when there is room for it; "?query"
+# asks for it outright. Nothing is sent anywhere until you press Enter — there
+# are no live suggestions, on purpose.
+# ---------------------------------------------------------------------------
+[web]
+# Turn the row off entirely.
+# enabled = true
+
+# The engine. "{}" is where the query goes; without it the query is appended,
+# so "https://duckduckgo.com/?q=" works too.
+# search = "https://duckduckgo.com/?q={}"
+
+# More engines, reached by prefix: typing "g:cats" searches the first of these.
+# Avoid f, a, c and web — those prefixes already pick a kind of result.
+[web.engines]
+# g = "https://www.google.com/search?q={}"
+# w = "https://en.wikipedia.org/w/index.php?search={}"
+# aw = "https://wiki.archlinux.org/index.php?search={}"
 
 # ---------------------------------------------------------------------------
 # The window itself. Everything here applies the next time you open the

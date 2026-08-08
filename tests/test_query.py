@@ -39,6 +39,11 @@ check("c: means the calculator", split("c:2+2"), ("calc", "2+2"))
 check("= means the calculator too", split("=2+2"), ("calc", "2+2"))
 check("the long form works", split("file:notes"), ("file", "notes"))
 check("app: is not read as a:", split("app:term"), ("app", "term"))
+check("? means the web", split("?how to exit vim"), ("web", "how to exit vim"))
+check("web: does too", split("web:cats"), ("web", "cats"))
+# The prefix is a leading character, so a question mark anywhere else is part
+# of what is being searched for — which is where they usually are.
+check("a question mark later is not a prefix", split("what?"), (None, "what?"))
 # "fire" starts with "f" but not with "f:", so it must survive untouched —
 # otherwise every query beginning with f, a or c would be mangled.
 check("a bare letter is not a prefix", split("fire"), (None, "fire"))
@@ -56,6 +61,8 @@ check("a directory is badged Folder, not File",
       badge(Result(title="x", kind="file", is_dir=True)), "Folder")
 check("a calculation is badged Calc",
       badge(Result(title="x", kind="calc")), "Calc")
+check("a web row is badged Web",
+      badge(Result(title="x", kind="web")), "Web")
 check("an unknown kind gets no badge rather than a wrong one",
       badge(Result(title="x", kind="something-new")), "")
 check("a colon later on is not a prefix", split("a:b:c"), ("app", "b:c"))

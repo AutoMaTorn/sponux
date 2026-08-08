@@ -14,6 +14,9 @@ A lightweight Spotlight-like launcher for Linux, built with Python + GTK 4.
   outside it.
 - **Calculator** — type an expression (`2+2*10`, `sqrt(2)`, `sin(pi/2)`),
   press Enter to copy the result. Safe evaluator, no `eval()`.
+- **Web search** — a row under the local results hands the query to your
+  browser, and a query that names a URL offers to open it. Nothing is sent
+  anywhere until you press Enter: there are no live suggestions, on purpose.
 
 It runs as a single-instance resident daemon: the first launch starts it,
 every later `sponux` call toggles the window in about 20 ms.
@@ -77,14 +80,14 @@ and take focus. See [Wayland](docs/user-guide.en.md#when-something-is-wrong).
 **Debian / Ubuntu** — the package declares its dependencies itself:
 
 ```sh
-sudo apt install ./sponux_0.2.3-1_all.deb
+sudo apt install ./sponux_0.3.0-1_all.deb
 ```
 
 **Anywhere else** — there is nothing to install. Unpack it and run it:
 
 ```sh
-tar xf sponux-0.2.3.tar.gz -C ~/opt
-~/opt/sponux-0.2.3/bin/sponux
+tar xf sponux-0.3.0.tar.gz -C ~/opt
+~/opt/sponux-0.3.0/bin/sponux
 ```
 
 Or clone this repository and run `bin/sponux` out of it — same thing.
@@ -108,7 +111,7 @@ exec_always --no-startup-id sponux --daemon        # …and start it at login
 
 | Key | Action |
 | --- | --- |
-| Type | search apps / files / math |
+| Type | search apps / files / math / the web |
 | ↑ / ↓ | move selection |
 | Enter | launch / open / copy result |
 | Ctrl+Enter | open the folder containing the file |
@@ -119,15 +122,15 @@ exec_always --no-startup-id sponux --daemon        # …and start it at login
 | Ctrl+Q | quit the daemon |
 
 Prefixes narrow the search: `f:` files, `a:` apps, `c:` or `=` the calculator,
-and a leading `/` or `~/` completes a path instead of searching. Both the keys
-and the prefixes are shown in the window itself, so nothing has to be
-memorised.
+`?` the web, and a leading `/` or `~/` completes a path instead of searching.
+Both the keys and the prefixes are shown in the window itself, so nothing has to
+be memorised.
 
 Configuration is two optional files in `~/.config/sponux/` — `config.toml` for
 behaviour, `style.css` for appearance. `sponux --write-config` writes commented
 starters. `[window]` sets the card's width, result count and placement;
-`[keys]` rebinds the modifier actions. Edits apply on the next open, with no
-restart.
+`[web]` picks the search engine; `[keys]` rebinds the modifier actions. Edits
+apply on the next open, with no restart.
 
 ```sh
 sponux --which ~/.config/i3/config   # what would open this, and why
@@ -138,9 +141,9 @@ sponux --reindex                     # rebuild the file index now
 ## Build the packages
 
 ```sh
-python3 tools/mkdeb.py         # dist/sponux_0.2.3-1_all.deb   (needs dpkg-deb)
-python3 tools/mktarball.py     # dist/sponux-0.2.3.tar.gz      (unpack and run)
-python3 tools/mkwheel.py       # dist/sponux-0.2.3-py3-none-any.whl
+python3 tools/mkdeb.py         # dist/sponux_0.3.0-1_all.deb   (needs dpkg-deb)
+python3 tools/mktarball.py     # dist/sponux-0.3.0.tar.gz      (unpack and run)
+python3 tools/mkwheel.py       # dist/sponux-0.3.0-py3-none-any.whl
 ```
 
 Pure Python, so all three are architecture-independent, and all three read their
@@ -164,6 +167,7 @@ python3 tests/test_index.py       # index rules + live inotify updates
 python3 tests/test_config.py      # [open] rules, the config writer, dotfiles
 python3 tests/test_usage.py       # the frecency curve and its effect on results
 python3 tests/test_query.py       # kind prefixes and typed-path completion
+python3 tests/test_web.py         # search URLs, what counts as one, where the row sits
 python3 tests/test_report.py      # the runtime log: bounds, and never raising
 python3 tests/test_daemon.py      # which installation --check says is answering
 python3 tests/test_docs.py        # the two guides: parity, links, documented flags
