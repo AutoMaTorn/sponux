@@ -48,7 +48,8 @@ sponux/            app.py (GTK4 window/actions), placement.py (X11),
 bin/sponux          hotkey entry point; D-Bus fast path, ~20 ms toggle
 tools/              mkdeb.py / mktarball.py / mkwheel.py, bench.py, visual.py
 tests/              test_*.py — each runs standalone, no pytest, no display
-packaging/          desktop entry, man page, icons, Debian changelog
+packaging/          desktop entry, AppStream metainfo, man page, icons,
+                    Debian changelog, copyright
 ```
 
 `sponux/` and `bin/` are what ships and runs; `packaging/` and `tools/` are

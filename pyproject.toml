@@ -11,13 +11,22 @@ readme = "README.md"
 # which entered the standard library in 3.11.
 requires-python = ">=3.11"
 license = "MIT"
+authors = [{ name = "automatorn", email = "automatorn@gmail.com" }]
+keywords = ["launcher", "search", "spotlight", "gtk4", "desktop", "x11"]
+# There is no trove classifier for Wayland — checked against PyPI's list — so
+# the X11 one stands alone even though placement.py now has a layer-shell path.
+# The Python versions are what requires-python already promises; CI exercises
+# whichever interpreter the runner's distribution ships, not all three.
 classifiers = [
     "Environment :: X11 Applications :: GTK",
     "Intended Audience :: End Users/Desktop",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Desktop Environment",
+    "Topic :: Utilities",
 ]
 
 # PyGObject and GTK 4 are deliberately not listed as pip dependencies: they are
@@ -25,6 +34,12 @@ classifiers = [
 # On Debian/Ubuntu:
 #     apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/AutoMaTorn/sponux"
+Repository = "https://github.com/AutoMaTorn/sponux"
+Issues = "https://github.com/AutoMaTorn/sponux/issues"
+Changelog = "https://github.com/AutoMaTorn/sponux/blob/main/packaging/changelog"
 
 [project.scripts]
 sponux = "sponux.__main__:main"

@@ -19,6 +19,20 @@ VERSION = PROJECT["version"]
 SUMMARY = PROJECT["description"]
 REQUIRES_PYTHON = PROJECT["requires-python"]
 CLASSIFIERS = PROJECT.get("classifiers", [])
+KEYWORDS = PROJECT.get("keywords", [])
+URLS = PROJECT.get("urls", {})
+LICENSE = PROJECT.get("license", "")
+
+# One author, but the field is a list because that is the shape pyproject
+# defines; the .deb's Maintainer comes from the changelog trailer instead,
+# because that is the name dpkg shows and the changelog is what signs a release.
+_AUTHORS = PROJECT.get("authors", [])
+AUTHOR = _AUTHORS[0].get("name", "") if _AUTHORS else ""
+AUTHOR_EMAIL = _AUTHORS[0].get("email", "") if _AUTHORS else ""
+
+# The .deb control file and the AppStream metainfo both need this, and it is
+# written out in pyproject already — no reason for a third copy.
+HOMEPAGE = URLS.get("Homepage", "")
 
 _CHANGELOG = (SRC / "packaging" / "changelog").read_text()
 # "sponux (0.1.0-1) unstable; urgency=medium"
@@ -49,6 +63,9 @@ _VERSION_IN = (
     ("sponux/__init__.py", r'__version__\s*=\s*"([^"]+)"'),
     # .TH SPONUX 1 "2026-07-26" "sponux 0.1.0" "User Commands"
     ("packaging/sponux.1", r'^\.TH\s+\S+\s+\d+\s+"[^"]*"\s+"sponux ([^"]+)"'),
+    # <release version="0.2.1" date="2026-07-29"/> — releases are newest-first,
+    # as AppStream asks, so the first match is the one that has to agree.
+    ("packaging/io.github.sponux.metainfo.xml", r'<release version="([^"]+)"'),
 )
 
 

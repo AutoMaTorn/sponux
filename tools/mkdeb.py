@@ -37,6 +37,11 @@ FILES = [
     ("bin/sponux", "usr/bin/sponux", 0o755),
     ("packaging/io.github.sponux.desktop",
      "usr/share/applications/io.github.sponux.desktop", 0o644),
+    # AppStream metadata, which is what makes the package visible in GNOME
+    # Software and KDE Discover. /usr/share/metainfo is the current location;
+    # appdata/ is the legacy one and lintian objects to it.
+    ("packaging/io.github.sponux.metainfo.xml",
+     "usr/share/metainfo/io.github.sponux.metainfo.xml", 0o644),
     # Icons go in hicolor's standard buckets: a directory named after any
     # other size is not in hicolor's index.theme and is never looked in.
     *[(f"packaging/icons/hicolor/{s}x{s}/apps/io.github.sponux.png",
@@ -67,16 +72,36 @@ DEPENDS = [
     "gir1.2-gtk-4.0",
 ]
 
+# gdbus lives in libglib2.0-bin, which python3-gi does *not* pull in — it
+# depends on libglib2.0-0t64 only. Without gdbus, bin/sponux still works: the
+# fast path fails and it falls through to `python3 -m sponux`. That costs the
+# GTK import on every open, 327 ms against 11 ms, which is the whole point of
+# the wrapper — so it is a Recommends (installed by default, removable) rather
+# than a Depends the program does not actually need to run.
+RECOMMENDS = [
+    "libglib2.0-bin",
+]
+
+# Only useful in a Wayland session, and dead weight in the X11 one this is
+# mainly built for, so it is not a Recommends. placement.py falls back to
+# letting the compositor place the window when it is missing.
+SUGGESTS = [
+    "gir1.2-gtk4layershell-1.0",
+]
+
 DESCRIPTION = """\
- sponux is a keyboard launcher for X11. It searches installed applications,
+ sponux is a keyboard launcher for Linux. It searches installed applications,
  a self-maintained index of filenames under your home directory, and evaluates
  arithmetic expressions.
  .
  It runs as a single-instance resident daemon: the first call starts it, and
  every later call toggles the window over D-Bus without starting an
- interpreter. The window takes itself out of the window manager's hands
+ interpreter. On X11 the window takes itself out of the window manager's hands
  (override-redirect) and places itself on the monitor holding the pointer, so
- no window-manager rules are needed on a tiling or a stacking WM alike.
+ no window-manager rules are needed on a tiling or a stacking WM alike; under
+ Wayland it does the same as an overlay layer surface when
+ gir1.2-gtk4layershell-1.0 is installed, and otherwise leaves placement to the
+ compositor.
  .
  Which application opens which file, what the index covers and how results are
  ranked are configured in ~/.config/sponux/config.toml; appearance is a
@@ -152,9 +177,11 @@ def control():
         f"Maintainer: {m.MAINTAINER}\n"
         f"Installed-Size: {installed_size()}\n"
         f"Depends: {', '.join(DEPENDS)}\n"
+        f"Recommends: {', '.join(RECOMMENDS)}\n"
+        f"Suggests: {', '.join(SUGGESTS)}\n"
         "Section: x11\n"
         "Priority: optional\n"
-        "Homepage: https://github.com/AutoMaTorn/sponux\n"
+        f"Homepage: {m.HOMEPAGE}\n"
         f"Description: {m.SUMMARY}\n"
         f"{DESCRIPTION}"
     )

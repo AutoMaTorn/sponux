@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata: what GNOME Software, KDE Discover and `appstreamcli` read.
+  Without it a package with a desktop entry and an icon is still invisible in
+  every software centre.
+
+  The component id is io.github.sponux, matching the desktop entry, the icon
+  name and the D-Bus name the daemon owns — those are already installed under
+  that name, so this file follows them rather than introducing a fourth
+  spelling.
+
+  The version in <releases> is checked against pyproject.toml by
+  tools/metadata.py: check_version_agreement(), the same way the manual page is,
+  so a release cannot leave it behind. Releases are newest first, which the
+  specification asks for and that check relies on.
+
+  Validate with: appstreamcli validate packaging/io.github.sponux.metainfo.xml
+  (tests/test_docs.py runs it when appstreamcli is installed).
+-->
+<component type="desktop-application">
+  <id>io.github.sponux</id>
+
+  <!-- The licence of this metadata, not of the program; the program's is
+       <project_license> below. FSFAP is what the specification suggests for
+       metadata that is meant to be copied into distribution catalogues. -->
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>sponux</name>
+  <summary>Spotlight-like launcher for Linux: apps, files and a calculator</summary>
+
+  <description>
+    <p>
+      sponux is a keyboard launcher for Linux. It searches installed
+      applications, a self-maintained index of filenames under your home
+      directory, and evaluates arithmetic expressions — all in one GTK 4
+      window opened by a hotkey.
+    </p>
+    <p>
+      It runs as a single-instance resident daemon: the first call starts it,
+      and every later call toggles the window over D-Bus without starting an
+      interpreter, which is what keeps opening it to about 20 ms.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Application search and launch through the desktop's own database, with what you open often floating to the top</li>
+      <li>Instant filename search, backed by a small SQLite index kept current by inotify; type a path to reach anything it does not cover</li>
+      <li>A calculator that evaluates expressions without <code>eval()</code>, and copies the result</li>
+      <li>Places its own window, so no window-manager rules are needed on a tiling or a stacking WM alike</li>
+      <li>Configurable in <code>config.toml</code>, themeable with a <code>style.css</code> layered over the bundled dark theme</li>
+    </ul>
+  </description>
+
+  <!-- Required for a desktop-application: which .desktop entry this describes.
+       A software centre uses it for the Launch button. -->
+  <launchable type="desktop-id">io.github.sponux.desktop</launchable>
+
+  <icon type="stock">io.github.sponux</icon>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>launcher</keyword>
+    <keyword>search</keyword>
+    <keyword>run</keyword>
+    <keyword>spotlight</keyword>
+  </keywords>
+
+  <provides>
+    <binary>sponux</binary>
+  </provides>
+
+  <url type="homepage">https://github.com/AutoMaTorn/sponux</url>
+  <url type="bugtracker">https://github.com/AutoMaTorn/sponux/issues</url>
+  <url type="help">https://github.com/AutoMaTorn/sponux/blob/main/docs/user-guide.en.md</url>
+
+  <developer id="io.github.automatorn">
+    <name>automatorn</name>
+  </developer>
+
+  <!-- Screenshots are fetched over the network by software centres, so they
+       have to be URLs into the published repository rather than the paths the
+       README uses. The same three images the README embeds. -->
+  <screenshots>
+    <screenshot type="default">
+      <caption>Applications and files in one list</caption>
+      <image>https://raw.githubusercontent.com/AutoMaTorn/sponux/main/docs/images/search.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Completing a typed path, with no index involved</caption>
+      <image>https://raw.githubusercontent.com/AutoMaTorn/sponux/main/docs/images/path-completion.jpg</image>
+    </screenshot>
+    <screenshot>
+      <caption>Arithmetic, evaluated by walking an AST</caption>
+      <image>https://raw.githubusercontent.com/AutoMaTorn/sponux/main/docs/images/calculator.jpg</image>
+    </screenshot>
+  </screenshots>
+
+  <!-- An empty rating is a positive statement, not an omission: every OARS
+       question answered "none". Software centres show "unrated" without it. -->
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.2.1" date="2026-07-29">
+      <description>
+        <p>A new application icon, shipped as a vector master alongside the fixed hicolor sizes, so a HiDPI panel no longer scales the 128px one up.</p>
+      </description>
+    </release>
+    <release version="0.2.0" date="2026-07-27">
+      <description>
+        <p>Runtime problems go to a log file instead of a stderr a hotkey-launched process does not have, with desktop notifications for the failures a user can act on. Ships its own icon. A fresh install explains what it is for.</p>
+      </description>
+    </release>
+    <release version="0.1.0" date="2026-07-26">
+      <description>
+        <p>Initial release: application, file and calculator search in a resident GTK 4 daemon toggled over D-Bus.</p>
+      </description>
+    </release>
+  </releases>
+</component>

@@ -58,6 +58,20 @@ only the standard library. The packages above cost ~3 MB; they are bindings to
 the GTK 4 runtime (~43 MB), which any GTK 4 application on the system already
 brings in. sponux itself is a 42 KB package, 139 KB installed.
 
+Two more are optional, and the `.deb` asks for them itself — this is only for
+running from a source tree or a tarball:
+
+```sh
+sudo apt install libglib2.0-bin                  # gdbus: the fast toggle
+sudo apt install gir1.2-gtk4layershell-1.0       # Wayland only: placement
+```
+
+`libglib2.0-bin` provides `gdbus`, which is how `bin/sponux` reaches a running
+daemon in ~11 ms instead of importing GTK to do it in ~327 ms. Nothing breaks
+without it; every open just takes the slow path. `gir1.2-gtk4layershell-1.0`
+does nothing on X11 — under Wayland it is what lets the window centre itself
+and take focus. See [Wayland](docs/user-guide.en.md#when-something-is-wrong).
+
 ## Install
 
 **Debian / Ubuntu** — the package declares its dependencies itself:

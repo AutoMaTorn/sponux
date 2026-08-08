@@ -17,12 +17,22 @@ import metadata as m
 DIST = f"{m.NAME}-{m.VERSION}.dist-info"
 OUT = m.DIST / f"{m.NAME}-{m.VERSION}-py3-none-any.whl"
 
+# Everything here comes from pyproject.toml through metadata.py: a field filled
+# in there but not written out here would be metadata the built wheel does not
+# actually carry, which is the kind of gap that is invisible until someone reads
+# the artifact instead of the source.
 METADATA = f"""Metadata-Version: 2.1
 Name: {m.NAME}
 Version: {m.VERSION}
 Summary: {m.SUMMARY}
+Author: {m.AUTHOR}
+Author-email: {m.AUTHOR_EMAIL}
+License: {m.LICENSE}
+Keywords: {','.join(m.KEYWORDS)}
 Requires-Python: {m.REQUIRES_PYTHON}
 """ + "".join(
+    f"Project-URL: {label}, {url}\n" for label, url in m.URLS.items()
+) + "".join(
     f"Classifier: {c}\n" for c in m.CLASSIFIERS
 ) + """
 
